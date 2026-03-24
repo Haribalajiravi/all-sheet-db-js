@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Gemini agent
+.gemini/
+
+# Internal / AI docs (not for public repo)
+AI_CONTEXT.md
+QUICK_START.md
+all-sheet-db-js.md
