@@ -15,6 +15,7 @@ import {
   UpdateOptions,
   UpdateResult,
   ServiceType,
+  AuthToken,
 } from '../types';
 
 class MockService implements ISpreadsheetService {
@@ -25,7 +26,7 @@ class MockService implements ISpreadsheetService {
     // mock initialize
   }
 
-  async authenticate(): Promise<any> {
+  async authenticate(): Promise<AuthToken> {
     this.authenticated = true;
     return { accessToken: 'mock-token', expiresAt: Date.now() + 3600 };
   }
@@ -34,7 +35,7 @@ class MockService implements ISpreadsheetService {
     return this.authenticated;
   }
 
-  async refreshAuth(): Promise<any> {
+  async refreshAuth(): Promise<AuthToken> {
     return { accessToken: 'refreshed-token', expiresAt: Date.now() + 3600 };
   }
 
