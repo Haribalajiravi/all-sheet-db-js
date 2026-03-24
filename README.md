@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![CI](https://github.com/Haribalajiravi/all-sheet-db-js/actions/workflows/ci.yml/badge.svg)](https://github.com/Haribalajiravi/all-sheet-db-js/actions)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/7xcfqmn)
 
 ## ✨ Features
 
@@ -319,6 +320,14 @@ Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for g
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## ☕ Support
+
+If you find this library useful, consider supporting its development:
+
+- 📦 [View on npm](https://www.npmjs.com/package/all-sheet-db-js)
+- ☕ [Buy me a coffee](https://buymeacoffee.com/7xcfqmn)
+- ⭐ Star the repo on GitHub!
+
 ## 📝 License
 
-[MIT](./LICENSE) © [Hari Balaji Ravi](https://github.com/haribalajiravi)
+[MIT](./LICENSE) © [Hari Balaji Ravi](https://github.com/Haribalajiravi)
