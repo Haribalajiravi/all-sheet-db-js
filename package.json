@@ -1,6 +1,6 @@
 {
   "name": "all-sheet-db-js",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Use Google Sheets as a database — store, retrieve, update, and delete rows with a typed, ORM-like API. Supports formulas, schema migration, and silent OAuth refresh.",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
