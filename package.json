@@ -53,15 +53,15 @@
     "react",
     "browser"
   ],
-  "author": "Hari Balaji Ravi <haribalajiravi@gmail.com> (https://github.com/haribalajiravi)",
+  "author": "Hari Balaji Ravi <haribalajiravi@gmail.com> (https://github.com/Haribalajiravi)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/haribalajiravi/all-sheet-db-js.git"
+    "url": "git+https://github.com/Haribalajiravi/all-sheet-db-js.git"
   },
-  "homepage": "https://github.com/haribalajiravi/all-sheet-db-js#readme",
+  "homepage": "https://github.com/Haribalajiravi/all-sheet-db-js#readme",
   "bugs": {
-    "url": "https://github.com/haribalajiravi/all-sheet-db-js/issues"
+    "url": "https://github.com/Haribalajiravi/all-sheet-db-js/issues"
   },
   "engines": {
     "node": ">=18"

@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/all-sheet-db-js.svg)](https://www.npmjs.com/package/all-sheet-db-js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-[![CI](https://github.com/haribalajiravi/all-sheet-db-js/actions/workflows/ci.yml/badge.svg)](https://github.com/haribalajiravi/all-sheet-db-js/actions)
+[![CI](https://github.com/Haribalajiravi/all-sheet-db-js/actions/workflows/ci.yml/badge.svg)](https://github.com/Haribalajiravi/all-sheet-db-js/actions)
 
 ## ✨ Features
 
