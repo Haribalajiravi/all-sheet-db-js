@@ -15,7 +15,7 @@ export const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 export const DEFAULT_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/drive.file'
+  'https://www.googleapis.com/auth/drive.file',
 ];
 
 export const DEFAULT_DISCOVERY_DOCS = [

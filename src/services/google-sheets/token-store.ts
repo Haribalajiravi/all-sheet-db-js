@@ -16,7 +16,7 @@ import {
 
 /** Persist an AuthToken + the OAuth client id to cookies. */
 export function saveAuthToken(token: AuthToken, oauthClientId: string): void {
-  // We only set programmatic expiry on the access token, but we must keep the other cookies 
+  // We only set programmatic expiry on the access token, but we must keep the other cookies
   // alive for a long time (1 year) so we can use them to silently refresh or use the refresh token
   const ONE_YEAR = 60 * 60 * 24 * 365;
 

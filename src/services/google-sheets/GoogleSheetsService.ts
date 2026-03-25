@@ -287,10 +287,13 @@ export class GoogleSheetsService implements ISpreadsheetService {
     } else if (token?.accessToken) {
       // Fallback manual revoke if GIS library is somehow not loaded completely
       try {
-        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token.accessToken)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
+        await fetch(
+          `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token.accessToken)}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          }
+        );
         logger.debug('Google token revoked via POST endpoint');
       } catch (error) {
         logger.error('Failed to manually revoke Google token:', error);
