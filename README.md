@@ -37,7 +37,10 @@ npm install all-sheet-db-js
       "name": "google-sheets",
       "enabled": true,
       "credentials": {
-        "scopes": "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file"
+        "scopes": [
+          "https://www.googleapis.com/auth/spreadsheets",
+          "https://www.googleapis.com/auth/drive.file"
+        ]
       }
     }
   ]

@@ -29,7 +29,6 @@ export interface AuthCredentials {
 
 export interface AuthToken {
   accessToken: string;
-  refreshToken?: string;
   expiresAt: number;
   tokenType?: string;
 }

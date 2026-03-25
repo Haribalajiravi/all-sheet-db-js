@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import integrationConfig from './integration-config.json';
+import integrationConfig from '../../integration-config.json';
 import {
   allSheetDB,
   LogLevel,
@@ -145,7 +145,7 @@ export default function App() {
     setBusy(true);
     setStatus('Opening Google sign-in…');
     try {
-      await allSheetDB.authenticate({ clientId: cid, oauthPrompt: 'consent' });
+      await allSheetDB.authenticate({ clientId: cid });
       await bootstrap();
     } catch (e) {
       setStatus(formatErrorMessage(e));

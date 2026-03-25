@@ -96,7 +96,11 @@ export class GoogleSheetsService implements ISpreadsheetService {
   }
 
   private getScopes(): string {
-    return this.config.scopes || DEFAULT_SCOPES;
+    const scopes = this.config.scopes;
+    if (scopes && scopes.length > 0) {
+      return scopes.join(' ');
+    }
+    return DEFAULT_SCOPES.join(' ');
   }
 
   private hasClientFullyLoaded(): boolean {
@@ -171,9 +175,9 @@ export class GoogleSheetsService implements ISpreadsheetService {
     const gisPrompt =
       credentials.oauthPrompt === 'select_account'
         ? 'select_account'
-        : credentials.oauthPrompt === ''
-          ? ''
-          : 'consent';
+        : credentials.oauthPrompt === 'consent'
+          ? 'consent'
+          : '';
 
     try {
       const token = await new Promise<AuthToken>((resolve, reject) => {
@@ -271,15 +275,28 @@ export class GoogleSheetsService implements ISpreadsheetService {
 
   async clearAuth(): Promise<void> {
     const token = getAuthToken();
+
     if (token?.accessToken && window.google?.accounts?.oauth2?.revoke) {
       try {
         window.google.accounts.oauth2.revoke(token.accessToken, () => {
-          logger.debug('Google token revoked');
+          logger.debug('Google token revoked successfully');
         });
       } catch (error) {
         logger.error('Failed to revoke Google token:', error);
       }
+    } else if (token?.accessToken) {
+      // Fallback manual revoke if GIS library is somehow not loaded completely
+      try {
+        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token.accessToken)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        logger.debug('Google token revoked via POST endpoint');
+      } catch (error) {
+        logger.error('Failed to manually revoke Google token:', error);
+      }
     }
+
     if (this.gapi?.client?.setToken) {
       this.gapi.client.setToken(null);
     }

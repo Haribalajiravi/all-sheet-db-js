@@ -76,7 +76,7 @@ export interface GapiClientNamespace {
 export interface GoogleSheetsConfig {
   apiKey?: string;
   discoveryDocs?: string[];
-  scopes?: string;
+  scopes?: string[];
 }
 
 /** GIS token callback payload */
