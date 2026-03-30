@@ -29,13 +29,16 @@ export function convertDataToRows<T>(
 
   return data.map(item => {
     const row: unknown[] = [];
+    const isObject = typeof item === 'object' && item !== null;
+    
     for (const column of model.columns) {
       if (column.type === 'formula' && column.formula) {
         row.push(column.formula);
-      } else if (typeof item === 'object' && item !== null) {
+      } else if (isObject) {
         row.push((item as Record<string, unknown>)[column.name] ?? column.defaultValue ?? '');
       } else {
-        row.push(item);
+        // If it's a primitive but we have a multi-column model, only push to the first column
+        row.push(row.length === 0 ? item : '');
       }
     }
     return row;
@@ -57,8 +60,20 @@ export function convertRowsToData<T>(
     return [];
   }
 
-  if (!model || !model.columns.length) {
-    return rows as T[];
+  // If no model, use first row as header keys
+  if (!model || !model.columns || !model.columns.length) {
+    const header = (rows[0] || []).map(h => String(h).trim());
+    const dataRows = rows.slice(1);
+    
+    return dataRows.map(row => {
+      const obj: Record<string, unknown> = {};
+      header.forEach((key, index) => {
+        if (key) {
+          obj[key] = row[index] ?? '';
+        }
+      });
+      return obj as T;
+    });
   }
 
   const dataRows = rows.slice(1);

@@ -14,6 +14,7 @@ export interface Expense {
   total_price: number; // computed by formula in the sheet
   merchant: string;
   notes: string;
+  department?: string; // Added via migration
 }
 
 /**
@@ -47,6 +48,7 @@ export const EXPENSE_SHEET_MODEL: SheetModel = {
     { name: 'merchant', type: 'string' },
     { name: 'notes', type: 'string' },
     { name: 'expense_id', type: 'string' },
+    { name: 'department', type: 'string' },
   ],
 };
 
@@ -63,6 +65,7 @@ export const EXPENSE_HEADER_ROW = {
   total_price: 'Total Price',
   merchant: 'Merchant',
   notes: 'Notes',
+  department: 'Department',
 } as unknown as Expense;
 
 export const EXPENSE_CATEGORIES = [
@@ -81,6 +84,6 @@ export function newExpenseId(): string {
 
 /** Header cells in column order for `ensureSheetHeaderRow` */
 export function expenseHeaderValues(): unknown[] {
-  const labels = EXPENSE_HEADER_ROW as Record<string, unknown>;
+  const labels = EXPENSE_HEADER_ROW as any as Record<string, unknown>;
   return EXPENSE_SHEET_MODEL.columns.map(c => labels[c.name] ?? '');
 }

@@ -14,9 +14,14 @@ import {
   DeleteResult,
   UpdateOptions,
   UpdateResult,
+  MigrationOptions,
+  MigrationResult,
+  FilterCondition,
+  SortOption,
 } from '../types';
 import { logger } from '../utils/logger';
 import { ConfigurationError, ServiceError } from '../utils/errors';
+import { cacheManager } from './CacheManager';
 
 export class ServiceManager {
   private services: Map<ServiceType, ISpreadsheetService> = new Map();
@@ -125,7 +130,13 @@ export class ServiceManager {
         sheetName: options.sheetName,
         rows: data.length,
       });
-      return await service.store(data, options);
+
+      const result = await service.store(data, options);
+      if (result.success && this.currentService) {
+        // Invalidate cache for this spreadsheet/sheet combination
+        cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+      }
+      return result;
     } catch (error) {
       logger.error(`Failed to store data:`, error);
       throw new ServiceError(
@@ -146,7 +157,66 @@ export class ServiceManager {
 
     try {
       logger.debug(`Retrieving data from ${this.currentService}`, { sheetName: options.sheetName });
-      return await service.retrieve<T>(options);
+
+      const serviceName = service.name as string;
+      const cacheKey = options.cache?.key || cacheManager.generateKey(serviceName, options.sheetName, options as any);
+
+      // Check cache if enabled and no force fetch
+      if (options.cache?.enabled && !options.cache?.forceFetch) {
+        const ttl = options.cache.ttl || 300000;
+        const cachedData = cacheManager.get<T[]>(cacheKey, ttl);
+        if (cachedData !== null) {
+          logger.info(`Cache hit for ${cacheKey}`);
+          return {
+            success: true,
+            data: cachedData,
+            fromCache: true,
+            timestamp: cacheManager.getTimestamp(cacheKey) || undefined,
+          };
+        }
+      }
+
+      // Fetch fresh data
+      let result = await service.retrieve<T>(options);
+
+      // Apply filtering, sorting, grouping, pagination AFTER fetching
+      // we do this in memory for consistent behavior across services
+      if (result.success && result.data) {
+        let processedData = [...result.data];
+
+        // Advanced Filtering
+        if (options.filters) {
+          processedData = this.applyFilters(processedData, options.filters);
+        }
+
+        // Sorting
+        if (options.sort && options.sort.length > 0) {
+          processedData = this.applySorting(processedData, options.sort);
+        }
+
+        // Grouping
+        if (options.groupBy) {
+          result.data = this.applyGrouping(processedData, options.groupBy) as any;
+        } else {
+          // Pagination (only if not grouped)
+          if (options.pagination) {
+            const { offset = 0, limit } = options.pagination;
+            processedData = processedData.slice(offset, limit ? offset + limit : undefined);
+          }
+          result.data = processedData;
+        }
+      }
+
+      // Save to cache if enabled
+      if (result.success && result.data && options.cache?.enabled && this.currentService) {
+        cacheManager.set(cacheKey, result.data);
+      }
+
+      return {
+        ...result,
+        timestamp: Date.now(),
+        fromCache: false,
+      };
     } catch (error) {
       logger.error(`Failed to retrieve data:`, error);
       throw new ServiceError(
@@ -181,7 +251,12 @@ export class ServiceManager {
 
     try {
       logger.debug(`Deleting rows from ${this.currentService}`, { sheetName: options.sheetName });
-      return await service.deleteRows(options);
+      const result = await service.deleteRows(options);
+      if (result.success && this.currentService) {
+        // Invalidate cache for this sheet
+        cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+      }
+      return result;
     } catch (error) {
       logger.error(`Failed to delete rows:`, error);
       throw new ServiceError(
@@ -202,7 +277,12 @@ export class ServiceManager {
 
     try {
       logger.debug(`Updating rows in ${this.currentService}`, { sheetName: options.sheetName });
-      return await service.updateRows(options);
+      const result = await service.updateRows(options);
+      if (result.success && this.currentService) {
+        // Invalidate cache for this sheet
+        cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+      }
+      return result;
     } catch (error) {
       logger.error(`Failed to update rows:`, error);
       throw new ServiceError(
@@ -210,5 +290,98 @@ export class ServiceManager {
         this.currentService || undefined
       );
     }
+  }
+
+  /**
+   * Run data migrations
+   */
+  async migrate(options: MigrationOptions): Promise<MigrationResult> {
+    const service = this.getCurrentService();
+    if (!service) {
+      throw new ServiceError('No active service selected');
+    }
+
+    try {
+      logger.info(`Running migrations for ${this.currentService}/${options.sheetName}`);
+      const result = await service.migrate(options);
+      if (result.success && this.currentService) {
+        // Invalidate cache since schema/data changed
+        cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+      }
+      return result;
+    } catch (error) {
+      logger.error(`Migration failed:`, error);
+      throw new ServiceError(
+        `Migration failed: ${error instanceof Error ? error.message : String(error)}`,
+        this.currentService || undefined
+      );
+    }
+  }
+
+  // ╭──────────────────────────────────────────────────────────────────────╮
+  // │  Data Manipulation Helpers                                          │
+  // ╰──────────────────────────────────────────────────────────────────────╯
+
+  private applyFilters(data: any[], filters: Record<string, unknown> | FilterCondition[]): any[] {
+    if (Array.isArray(filters)) {
+      return data.filter(row => {
+        return filters.every(cond => {
+          const val = row[cond.column];
+          switch (cond.operator) {
+            case 'eq': return val === cond.value;
+            case 'neq': return val !== cond.value;
+            case 'gt': return val > cond.value;
+            case 'gte': return val >= cond.value;
+            case 'lt': return val < cond.value;
+            case 'lte': return val <= cond.value;
+            case 'contains': return String(val).toLowerCase().includes(String(cond.value).toLowerCase());
+            case 'in': return Array.isArray(cond.value) && cond.value.includes(val);
+            default: return true;
+          }
+        });
+      });
+    } else {
+      // Basic exact match for object-style filters
+      return data.filter(row => {
+        return Object.entries(filters).every(([key, value]) => row[key] === value);
+      });
+    }
+  }
+
+  private applySorting(data: any[], sort: SortOption[]): any[] {
+    return [...data].sort((a, b) => {
+      for (const opt of sort) {
+        const valA = a[opt.column];
+        const valB = b[opt.column];
+        if (valA === valB) continue;
+        const multiplier = opt.order === 'desc' ? -1 : 1;
+        return valA < valB ? -1 * multiplier : 1 * multiplier;
+      }
+      return 0;
+    });
+  }
+
+  private applyGrouping(data: any[], groupBy: string | string[]): any {
+    const keys = Array.isArray(groupBy) ? groupBy : [groupBy];
+    
+    const group = (items: any[], depth: number): any => {
+      if (depth >= keys.length) return items;
+      const key = keys[depth];
+      const result: Record<string, any> = {};
+      
+      items.forEach(item => {
+        const value = String(item[key]);
+        if (!result[value]) result[value] = [];
+        result[value].push(item);
+      });
+
+      // Recurse
+      for (const [v, groupedItems] of Object.entries(result)) {
+        result[v] = group(groupedItems, depth + 1);
+      }
+      return result;
+    };
+
+    return group(data, 0);
   }
 }

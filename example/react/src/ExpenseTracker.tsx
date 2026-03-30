@@ -37,13 +37,20 @@ export default function ExpenseTracker({
   );
   const retrieveRange = `${sheetTab}!A:H`;
 
+  const [fetchMeta, setFetchMeta] = useState({ fromCache: false, time: 0 });
+
   const loadExpensesFor = useCallback(
     async (spreadsheetId: string) => {
+      const start = Date.now();
       const res = await allSheetDB.retrieve<Expense>({
         sheetName: spreadsheetId,
         range: retrieveRange,
         model: modelForSheet,
+        cache: { enabled: true, ttl: 300000 },
       });
+      const end = Date.now();
+      setFetchMeta({ fromCache: !!res.fromCache, time: end - start });
+
       if (res.success && res.data) {
         setExpenses(res.data);
         setStatus(`Loaded ${res.data.length} row(s)`);
@@ -261,7 +268,6 @@ export default function ExpenseTracker({
 
   return (
     <div className="space-y-6">
-      {/* ── Spreadsheet selector ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end bg-muted/30 p-4 rounded-lg border">
         <div>
           <label className="label">Active Spreadsheet</label>
@@ -287,6 +293,22 @@ export default function ExpenseTracker({
         </div>
       </div>
 
+      {fetchMeta.time > 0 && (
+        <div className="flex items-center justify-between px-4 py-2 bg-black/20 rounded-lg border text-xs">
+          <div className="flex items-center gap-4">
+             <span className="text-muted-foreground uppercase tracking-widest font-semibold flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${fetchMeta.fromCache ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+                {fetchMeta.fromCache ? 'Cached Result' : 'Real-time API Fetch'}
+             </span>
+             <span className="text-muted-foreground/60">|</span>
+             <span className="text-muted-foreground font-mono italic">Fetched in {fetchMeta.time}ms</span>
+          </div>
+          <div className="text-muted-foreground/60 italic">
+             {fetchMeta.fromCache ? 'Data served from local memory (no network activity)' : 'Data retrieved fresh from Google Sheets API'}
+          </div>
+        </div>
+      )}
+
       {/* ── Data table ────────────────────────────────────────────────── */}
       <div className="rounded-lg border overflow-hidden bg-card">
         <table className="w-full text-sm">
@@ -299,6 +321,7 @@ export default function ExpenseTracker({
               <th className="px-4 py-3 text-right">Total Price</th>
               <th className="px-4 py-3">Merchant</th>
               <th className="px-4 py-3">Notes</th>
+              <th className="px-4 py-3 text-blue-400">Department</th>
               <th className="px-4 py-3">Ref ID</th>
               <th className="px-4 py-3 text-center">Actions</th>
             </tr>
@@ -331,6 +354,15 @@ export default function ExpenseTracker({
                   <td className="px-4 py-2.5 font-medium">{row.merchant}</td>
                   <td className="px-4 py-2.5 text-muted-foreground max-w-[200px] truncate" title={row.notes}>
                     {row.notes}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {row.department ? (
+                      <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/20">
+                        {row.department}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/30">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{row.expense_id.substring(0, 8)}</td>
                   <td className="px-4 py-2.5 text-center">

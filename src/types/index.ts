@@ -2,6 +2,8 @@
  * Core types and interfaces for all-sheet-db-js
  */
 
+export * from './migration';
+
 export type ServiceType = 'google-sheets' | 'microsoft-excel';
 
 export interface IntegrationConfig {
@@ -54,16 +56,68 @@ export interface SheetModel {
 }
 
 export interface StoreOptions {
+  /** Spreadsheet ID or common name */
   sheetName: string;
+  /** Schema model */
   model?: SheetModel;
+  /** Append rows instead of overwriting */
   append?: boolean;
 }
 
+export interface CacheOptions {
+  /** Enable or disable caching for this request. Defaults to false. */
+  enabled: boolean;
+  /** 
+   * Time to live in milliseconds. 
+   * If not provided, defaults to 5 minutes (300,000 ms).
+   */
+  ttl?: number;
+  /** 
+   * Optional custom key for the cache. 
+   * If not provided, a key will be generated based on spreadsheetId/sheetName and other options.
+   */
+  key?: string;
+  /**
+   * Force fetch from API even if cached data exists.
+   */
+  forceFetch?: boolean;
+}
+
+export type FilterOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'in';
+
+export interface FilterCondition {
+  column: string;
+  operator: FilterOperator;
+  value: any;
+}
+
+export interface PaginationOptions {
+  limit?: number;
+  offset?: number;
+}
+
+export interface SortOption {
+  column: string;
+  order: 'asc' | 'desc';
+}
+
 export interface RetrieveOptions {
+  /** Spreadsheet ID or common name */
   sheetName: string;
+  /** Schema model */
   model?: SheetModel;
+  /** Range to read (e.g. "Sheet1!A1:Z100") */
   range?: string;
-  filters?: Record<string, unknown>;
+  /** Predicate filters to apply (exact match if object, advanced if array) */
+  filters?: Record<string, unknown> | FilterCondition[];
+  /** Pagination settings */
+  pagination?: PaginationOptions;
+  /** Sorting settings */
+  sort?: SortOption[];
+  /** Grouping settings */
+  groupBy?: string | string[];
+  /** Optional cache configuration */
+  cache?: CacheOptions;
 }
 
 export interface StoreResult {
@@ -76,6 +130,10 @@ export interface RetrieveResult<T = unknown> {
   success: boolean;
   data?: T[];
   error?: string;
+  /** Timestamp when the data was retrieved (from cache or API) */
+  timestamp?: number;
+  /** Indicates if the data was served from cache */
+  fromCache?: boolean;
 }
 
 /**

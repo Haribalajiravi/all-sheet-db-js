@@ -18,6 +18,9 @@ import {
   DeleteResult,
   UpdateOptions,
   UpdateResult,
+  MigrationOptions,
+  MigrationResult,
+  MigrationAction,
 } from '../../types';
 import { logger } from '../../utils/logger';
 import {
@@ -720,6 +723,231 @@ export class GoogleSheetsService implements ISpreadsheetService {
     } catch (error) {
       logger.error('Failed to update rows:', error);
       return { success: false, error: formatErrorMessage(error) };
+    }
+  }
+
+  // ╭──────────────────────────────────────────────────────────────────────╮
+  // │  Migrations                                                         │
+  // ╰──────────────────────────────────────────────────────────────────────╯
+
+  async migrate(options: MigrationOptions): Promise<MigrationResult> {
+    const { spreadsheetId, sheetName, migrations } = options;
+    await this.ensureGapiClientInitialized();
+    await this.ensureAccessToken();
+
+    try {
+      // 1. Get current version
+      const currentVersion = await this.getMetadataVersion(spreadsheetId, sheetName);
+      const pendingMigrations = migrations
+        .filter(m => m.version > currentVersion)
+        .sort((a, b) => a.version - b.version);
+
+      if (pendingMigrations.length === 0) {
+        logger.info(`Sheet "${sheetName}" is up to date (version ${currentVersion})`);
+        return {
+          success: true,
+          fromVersion: currentVersion,
+          toVersion: currentVersion,
+          appliedMigrations: 0,
+        };
+      }
+
+      logger.info(`Applying ${pendingMigrations.length} migration(s) to "${sheetName}"`);
+
+      // 2. Read all data
+      const range = `${sheetName}!A:Z`;
+      const res = await this.gapi!.client.sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range,
+      });
+      const allRows = res.result.values || [];
+      if (allRows.length === 0) {
+        throw new ServiceError(`Sheet "${sheetName}" is empty, cannot migrate data`);
+      }
+
+      let header = (allRows[0] || []).map(h => String(h).trim());
+      let data = allRows.slice(1);
+
+      // 3. Apply migrations one by one
+      for (const migration of pendingMigrations) {
+        logger.info(`Running migration v${migration.version}: ${migration.description}`);
+        
+        for (const action of migration.actions) {
+          const result = this.applyMigrationAction(header, data, action);
+          header = result.header;
+          data = result.data;
+        }
+      }
+
+      // 4. Write back everything
+      await this.gapi!.client.sheets.spreadsheets.values.clear({ spreadsheetId, range });
+      await this.gapi!.client.sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${sheetName}!A1`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [header, ...data] },
+      });
+
+      // 5. Update version
+      const finalVersion = pendingMigrations[pendingMigrations.length - 1].version;
+      await this.setMetadataVersion(spreadsheetId, sheetName, finalVersion);
+
+      logger.info(`Migration successful: ${sheetName} updated to v${finalVersion}`);
+      return {
+        success: true,
+        fromVersion: currentVersion,
+        toVersion: finalVersion,
+        appliedMigrations: pendingMigrations.length,
+      };
+    } catch (error) {
+      logger.error('Migration failed:', error);
+      return {
+        success: false,
+        fromVersion: 0,
+        toVersion: 0,
+        appliedMigrations: 0,
+        error: formatErrorMessage(error),
+      };
+    }
+  }
+
+  private applyMigrationAction(
+    header: string[],
+    data: any[][],
+    action: MigrationAction
+  ): { header: string[]; data: any[][] } {
+    let newHeader = [...header];
+    let newData = [...data];
+
+    switch (action.type) {
+      case 'add_column': {
+        if (!action.column) break;
+        newHeader.push(action.column);
+        const defaultValue = action.defaultValue ?? '';
+        newData = newData.map(row => {
+          const newRow = [...row];
+          while (newRow.length < newHeader.length - 1) newRow.push('');
+          newRow.push(defaultValue);
+          return newRow;
+        });
+        break;
+      }
+      case 'delete_column': {
+        const idx = newHeader.indexOf(action.column || '');
+        if (idx === -1) break;
+        newHeader.splice(idx, 1);
+        newData = newData.map(row => {
+          const newRow = [...row];
+          newRow.splice(idx, 1);
+          return newRow;
+        });
+        break;
+      }
+      case 'rename_column': {
+        const idx = newHeader.indexOf(action.column || '');
+        if (idx === -1 || !action.newColumn) break;
+        newHeader[idx] = action.newColumn;
+        break;
+      }
+      case 'transform_data': {
+        if (!action.transform) break;
+        // Convert rows to objects using header
+        const objects = convertRowsToData( [header, ...data], undefined);
+        const transformedObjects = objects.map(obj => action.transform!(obj));
+        // We need a dummy model or use convertDataToRows logic
+        // For simplicity in migration, we might just use the objects directly 
+        // if we can map them back to rows based on the current header
+        newData = transformedObjects.map(obj => {
+          return newHeader.map(h => (obj as any)[h] ?? '');
+        });
+        break;
+      }
+      case 'update_formula': {
+        const idx = newHeader.indexOf(action.column || '');
+        if (idx === -1 || !action.formula) break;
+        // Update all rows with the formula
+        newData = newData.map(row => {
+          const newRow = [...row];
+          newRow[idx] = action.formula;
+          return newRow;
+        });
+        break;
+      }
+    }
+
+    return { header: newHeader, data: newData };
+  }
+
+  private async getMetadataVersion(spreadsheetId: string, sheetName: string): Promise<number> {
+    const metaSheetName = '_db_metadata';
+    try {
+      // 1. Ensure meta sheet exists
+      const meta = await this.gapi!.client.sheets.spreadsheets.get({ spreadsheetId });
+      const titles = meta.result.sheets?.map(s => s.properties?.title) || [];
+      
+      if (!titles.includes(metaSheetName)) {
+        await this.gapi!.client.sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          resource: { requests: [{ addSheet: { properties: { title: metaSheetName, hidden: true } } }] },
+        });
+        // Write header if new
+        await this.gapi!.client.sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${metaSheetName}!A1`,
+          valueInputOption: 'RAW',
+          resource: { values: [['Key', 'Value']] },
+        });
+        return 0;
+      }
+
+      // 2. Read version
+      const res = await this.gapi!.client.sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${metaSheetName}!A:B`,
+      });
+      const rows = res.result.values || [];
+      const key = `version:${sheetName}`;
+      const versionRow = rows.find(r => r[0] === key);
+      
+      return versionRow ? parseInt(String(versionRow[1]), 10) || 0 : 0;
+    } catch (e) {
+      logger.warn('Failed to get metadata version, assuming 0', e);
+      return 0;
+    }
+  }
+
+  private async setMetadataVersion(spreadsheetId: string, sheetName: string, version: number): Promise<void> {
+    const metaSheetName = '_db_metadata';
+    const key = `version:${sheetName}`;
+    
+    try {
+      const res = await this.gapi!.client.sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${metaSheetName}!A:B`,
+      });
+      const rows = res.result.values || [['Key', 'Value']];
+      let found = false;
+      
+      const newRows = rows.map(r => {
+        if (r[0] === key) {
+          found = true;
+          return [key, version];
+        }
+        return r;
+      });
+
+      if (!found) {
+        newRows.push([key, version]);
+      }
+
+      await this.gapi!.client.sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${metaSheetName}!A1`,
+        valueInputOption: 'RAW',
+        resource: { values: newRows },
+      });
+    } catch (e) {
+      logger.error('Failed to set metadata version', e);
     }
   }
 }

@@ -17,12 +17,13 @@ import {
 
 import ExpenseTracker from './ExpenseTracker';
 import StockWatchlist from './StockWatchlist';
+import DatabaseView from './DatabaseView';
 import { expenseHeaderValues, EXPENSE_SHEET_MODEL } from './expenseModel';
 
 const LS_CLIENT = 'expense_demo_oauth_client_id';
 const LS_SPREADSHEET = 'expense_demo_spreadsheet_id';
 
-type Tab = 'expenses' | 'watchlist';
+type Tab = 'expenses' | 'watchlist' | 'database';
 
 /**
  * Root shell that:
@@ -271,6 +272,7 @@ export default function App() {
             {([
               { key: 'expenses' as Tab, label: '💰 Expenses' },
               { key: 'watchlist' as Tab, label: '📈 Stock Watchlist' },
+              { key: 'database' as Tab, label: '🛡️ Database' },
             ]).map(({ key, label }) => (
               <button
                 key={key}
@@ -293,6 +295,7 @@ export default function App() {
         <div className="pt-2">
           {activeTab === 'expenses' && <ExpenseTracker {...tabProps} />}
           {activeTab === 'watchlist' && <StockWatchlist {...tabProps} />}
+          {activeTab === 'database' && <DatabaseView {...tabProps} />}
         </div>
       </div>
     </div>

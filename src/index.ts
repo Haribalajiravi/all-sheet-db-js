@@ -19,8 +19,11 @@ import {
   UpdateResult,
   AuthCredentials,
   AuthToken,
+  MigrationOptions,
+  MigrationResult,
 } from './types';
 import { ServiceError } from './utils/errors';
+import { cacheManager } from './core/CacheManager';
 
 // Export types
 export type {
@@ -36,6 +39,7 @@ export type {
   UpdateResult,
   AuthCredentials,
   AuthToken,
+  CacheOptions,
   SheetModel,
   ColumnDefinition,
   GoogleSpreadsheetSummary,
@@ -178,6 +182,13 @@ export class AllSheetDB {
   }
 
   /**
+   * Run data migrations
+   */
+  async migrate(options: MigrationOptions): Promise<MigrationResult> {
+    return await this.serviceManager.migrate(options);
+  }
+
+  /**
    * Get all available services
    */
   getAvailableServices(): ServiceType[] {
@@ -198,6 +209,30 @@ export class AllSheetDB {
    */
   setLogLevel(level: LogLevel): void {
     logger.setLevel(level);
+  }
+
+  /**
+   * Clear all cached data
+   */
+  clearCache(): void {
+    cacheManager.clear();
+  }
+
+  /**
+   * Invalidate cache for a specific spreadsheet/sheet
+   */
+  invalidateCache(sheetName: string): void {
+    const service = this.getCurrentService();
+    if (service) {
+      cacheManager.invalidateByPrefix(`${service}:${sheetName}`);
+    }
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): { size: number; keys: string[] } {
+    return cacheManager.getStats();
   }
 }
 

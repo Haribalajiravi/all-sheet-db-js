@@ -13,6 +13,8 @@ import {
   DeleteResult,
   UpdateOptions,
   UpdateResult,
+  MigrationOptions,
+  MigrationResult,
 } from './index';
 
 export interface ISpreadsheetService {
@@ -60,6 +62,11 @@ export interface ISpreadsheetService {
    * Update rows matching a predicate
    */
   updateRows<T = unknown>(options: UpdateOptions<T>): Promise<UpdateResult>;
+
+  /**
+   * Run data migrations
+   */
+  migrate(options: MigrationOptions): Promise<MigrationResult>;
 
   /**
    * Clear authentication
