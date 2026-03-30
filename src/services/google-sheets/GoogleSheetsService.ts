@@ -771,7 +771,7 @@ export class GoogleSheetsService implements ISpreadsheetService {
       // 3. Apply migrations one by one
       for (const migration of pendingMigrations) {
         logger.info(`Running migration v${migration.version}: ${migration.description}`);
-        
+
         for (const action of migration.actions) {
           const result = this.applyMigrationAction(header, data, action);
           header = result.header;
@@ -816,7 +816,7 @@ export class GoogleSheetsService implements ISpreadsheetService {
     data: any[][],
     action: MigrationAction
   ): { header: string[]; data: any[][] } {
-    let newHeader = [...header];
+    const newHeader = [...header];
     let newData = [...data];
 
     switch (action.type) {
@@ -852,10 +852,10 @@ export class GoogleSheetsService implements ISpreadsheetService {
       case 'transform_data': {
         if (!action.transform) break;
         // Convert rows to objects using header
-        const objects = convertRowsToData( [header, ...data], undefined);
+        const objects = convertRowsToData([header, ...data], undefined);
         const transformedObjects = objects.map(obj => action.transform!(obj));
         // We need a dummy model or use convertDataToRows logic
-        // For simplicity in migration, we might just use the objects directly 
+        // For simplicity in migration, we might just use the objects directly
         // if we can map them back to rows based on the current header
         newData = transformedObjects.map(obj => {
           return newHeader.map(h => (obj as any)[h] ?? '');
@@ -884,11 +884,13 @@ export class GoogleSheetsService implements ISpreadsheetService {
       // 1. Ensure meta sheet exists
       const meta = await this.gapi!.client.sheets.spreadsheets.get({ spreadsheetId });
       const titles = meta.result.sheets?.map(s => s.properties?.title) || [];
-      
+
       if (!titles.includes(metaSheetName)) {
         await this.gapi!.client.sheets.spreadsheets.batchUpdate({
           spreadsheetId,
-          resource: { requests: [{ addSheet: { properties: { title: metaSheetName, hidden: true } } }] },
+          resource: {
+            requests: [{ addSheet: { properties: { title: metaSheetName, hidden: true } } }],
+          },
         });
         // Write header if new
         await this.gapi!.client.sheets.spreadsheets.values.update({
@@ -908,7 +910,7 @@ export class GoogleSheetsService implements ISpreadsheetService {
       const rows = res.result.values || [];
       const key = `version:${sheetName}`;
       const versionRow = rows.find(r => r[0] === key);
-      
+
       return versionRow ? parseInt(String(versionRow[1]), 10) || 0 : 0;
     } catch (e) {
       logger.warn('Failed to get metadata version, assuming 0', e);
@@ -916,10 +918,14 @@ export class GoogleSheetsService implements ISpreadsheetService {
     }
   }
 
-  private async setMetadataVersion(spreadsheetId: string, sheetName: string, version: number): Promise<void> {
+  private async setMetadataVersion(
+    spreadsheetId: string,
+    sheetName: string,
+    version: number
+  ): Promise<void> {
     const metaSheetName = '_db_metadata';
     const key = `version:${sheetName}`;
-    
+
     try {
       const res = await this.gapi!.client.sheets.spreadsheets.values.get({
         spreadsheetId,
@@ -927,7 +933,7 @@ export class GoogleSheetsService implements ISpreadsheetService {
       });
       const rows = res.result.values || [['Key', 'Value']];
       let found = false;
-      
+
       const newRows = rows.map(r => {
         if (r[0] === key) {
           found = true;

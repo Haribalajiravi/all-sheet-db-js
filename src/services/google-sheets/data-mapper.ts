@@ -30,7 +30,7 @@ export function convertDataToRows<T>(
   return data.map(item => {
     const row: unknown[] = [];
     const isObject = typeof item === 'object' && item !== null;
-    
+
     for (const column of model.columns) {
       if (column.type === 'formula' && column.formula) {
         row.push(column.formula);
@@ -64,7 +64,7 @@ export function convertRowsToData<T>(
   if (!model || !model.columns || !model.columns.length) {
     const header = (rows[0] || []).map(h => String(h).trim());
     const dataRows = rows.slice(1);
-    
+
     return dataRows.map(row => {
       const obj: Record<string, unknown> = {};
       header.forEach((key, index) => {

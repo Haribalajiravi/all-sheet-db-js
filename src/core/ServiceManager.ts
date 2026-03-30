@@ -159,7 +159,9 @@ export class ServiceManager {
       logger.debug(`Retrieving data from ${this.currentService}`, { sheetName: options.sheetName });
 
       const serviceName = service.name as string;
-      const cacheKey = options.cache?.key || cacheManager.generateKey(serviceName, options.sheetName, options as any);
+      const cacheKey =
+        options.cache?.key ||
+        cacheManager.generateKey(serviceName, options.sheetName, options as any);
 
       // Check cache if enabled and no force fetch
       if (options.cache?.enabled && !options.cache?.forceFetch) {
@@ -177,7 +179,7 @@ export class ServiceManager {
       }
 
       // Fetch fresh data
-      let result = await service.retrieve<T>(options);
+      const result = await service.retrieve<T>(options);
 
       // Apply filtering, sorting, grouping, pagination AFTER fetching
       // we do this in memory for consistent behavior across services
@@ -328,15 +330,24 @@ export class ServiceManager {
         return filters.every(cond => {
           const val = row[cond.column];
           switch (cond.operator) {
-            case 'eq': return val === cond.value;
-            case 'neq': return val !== cond.value;
-            case 'gt': return val > cond.value;
-            case 'gte': return val >= cond.value;
-            case 'lt': return val < cond.value;
-            case 'lte': return val <= cond.value;
-            case 'contains': return String(val).toLowerCase().includes(String(cond.value).toLowerCase());
-            case 'in': return Array.isArray(cond.value) && cond.value.includes(val);
-            default: return true;
+            case 'eq':
+              return val === cond.value;
+            case 'neq':
+              return val !== cond.value;
+            case 'gt':
+              return val > cond.value;
+            case 'gte':
+              return val >= cond.value;
+            case 'lt':
+              return val < cond.value;
+            case 'lte':
+              return val <= cond.value;
+            case 'contains':
+              return String(val).toLowerCase().includes(String(cond.value).toLowerCase());
+            case 'in':
+              return Array.isArray(cond.value) && cond.value.includes(val);
+            default:
+              return true;
           }
         });
       });
@@ -363,12 +374,12 @@ export class ServiceManager {
 
   private applyGrouping(data: any[], groupBy: string | string[]): any {
     const keys = Array.isArray(groupBy) ? groupBy : [groupBy];
-    
+
     const group = (items: any[], depth: number): any => {
       if (depth >= keys.length) return items;
       const key = keys[depth];
       const result: Record<string, any> = {};
-      
+
       items.forEach(item => {
         const value = String(item[key]);
         if (!result[value]) result[value] = [];

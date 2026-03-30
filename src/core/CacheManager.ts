@@ -97,15 +97,15 @@ export class CacheManager {
     const keysToRemove: string[] = [];
 
     for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(fullPrefix)) {
-            keysToRemove.push(key);
-        }
+      const key = localStorage.key(i);
+      if (key && key.startsWith(fullPrefix)) {
+        keysToRemove.push(key);
+      }
     }
 
     keysToRemove.forEach(key => localStorage.removeItem(key));
     if (keysToRemove.length > 0) {
-        logger.debug(`Invalidated ${keysToRemove.length} cache entries for prefix: ${partialKey}`);
+      logger.debug(`Invalidated ${keysToRemove.length} cache entries for prefix: ${partialKey}`);
     }
   }
 
@@ -136,8 +136,9 @@ export class CacheManager {
     const sortedOptions = Object.keys(options)
       .sort()
       .reduce((acc, key) => {
-        if (key !== 'cache') { // Don't include cache options themselves in the key
-            acc[key] = options[key];
+        if (key !== 'cache') {
+          // Don't include cache options themselves in the key
+          acc[key] = options[key];
         }
         return acc;
       }, {} as any);

@@ -67,13 +67,13 @@ export interface StoreOptions {
 export interface CacheOptions {
   /** Enable or disable caching for this request. Defaults to false. */
   enabled: boolean;
-  /** 
-   * Time to live in milliseconds. 
+  /**
+   * Time to live in milliseconds.
    * If not provided, defaults to 5 minutes (300,000 ms).
    */
   ttl?: number;
-  /** 
-   * Optional custom key for the cache. 
+  /**
+   * Optional custom key for the cache.
    * If not provided, a key will be generated based on spreadsheetId/sheetName and other options.
    */
   key?: string;

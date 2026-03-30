@@ -3,7 +3,7 @@ import { cacheManager } from '../core/CacheManager';
 describe('CacheManager', () => {
   beforeEach(() => {
     // Mock localStorage
-    const localStorageMock = (function() {
+    const localStorageMock = (function () {
       let store: { [key: string]: string } = {};
       return {
         getItem: jest.fn((key: string) => store[key] || null),
@@ -19,13 +19,13 @@ describe('CacheManager', () => {
         key: jest.fn((index: number) => Object.keys(store)[index] || null),
         get length() {
           return Object.keys(store).length;
-        }
+        },
       };
     })();
 
     Object.defineProperty(window, 'localStorage', {
       value: localStorageMock,
-      writable: true
+      writable: true,
     });
 
     jest.useFakeTimers();
@@ -39,10 +39,10 @@ describe('CacheManager', () => {
   test('should set and get a value', () => {
     const key = 'test-key';
     const data = { foo: 'bar' };
-    
+
     cacheManager.set(key, data);
     const retrieved = cacheManager.get<{ foo: string }>(key);
-    
+
     expect(retrieved).toEqual(data);
     expect(window.localStorage.setItem).toHaveBeenCalledWith(
       expect.stringContaining(key),
@@ -60,10 +60,10 @@ describe('CacheManager', () => {
     const ttl = 1000; // 1 second
 
     cacheManager.set(key, data);
-    
+
     // Advance time past TTL
     jest.advanceTimersByTime(ttl + 100);
-    
+
     const retrieved = cacheManager.get(key, ttl);
     expect(retrieved).toBeNull();
     expect(window.localStorage.removeItem).toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe('CacheManager', () => {
   test('should clear all cache entries', () => {
     cacheManager.set('key1', { a: 1 });
     cacheManager.set('key2', { b: 2 });
-    
+
     // Add a non-library item to ensure we don't clear everything
     window.localStorage.setItem('other-key', 'other-value');
 

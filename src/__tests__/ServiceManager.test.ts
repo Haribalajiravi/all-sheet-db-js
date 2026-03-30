@@ -181,20 +181,20 @@ describe('ServiceManager', () => {
       serviceManager.registerService(mockService);
       const sheetName = 'cached-sheet';
       const cachedData = [{ id: 1, cached: true }];
-      
+
       const spySet = jest.spyOn(cacheManager, 'set');
       const spyGet = jest.spyOn(cacheManager, 'get').mockReturnValue(cachedData);
-      
+
       const result = await serviceManager.retrieve({
         sheetName,
-        cache: { enabled: true }
+        cache: { enabled: true },
       });
-      
+
       expect(result.success).toBe(true);
       expect(result.fromCache).toBe(true);
       expect(result.data).toEqual(cachedData);
       expect(spyGet).toHaveBeenCalled();
-      
+
       spyGet.mockRestore();
       spySet.mockRestore();
     });
@@ -203,22 +203,22 @@ describe('ServiceManager', () => {
       serviceManager.registerService(mockService);
       const sheetName = 'miss-sheet';
       const freshData = [{ id: 1, fresh: true }];
-      
+
       jest.spyOn(mockService, 'retrieve').mockResolvedValue({ success: true, data: freshData });
       const spySet = jest.spyOn(cacheManager, 'set').mockImplementation(() => {});
       const spyGet = jest.spyOn(cacheManager, 'get').mockReturnValue(null);
-      
+
       const result = await serviceManager.retrieve({
         sheetName,
-        cache: { enabled: true }
+        cache: { enabled: true },
       });
-      
+
       expect(result.success).toBe(true);
       expect(result.fromCache).toBe(false);
       expect(result.data).toEqual(freshData);
       expect(spyGet).toHaveBeenCalled();
       expect(spySet).toHaveBeenCalled();
-      
+
       spyGet.mockRestore();
       spySet.mockRestore();
     });
@@ -228,10 +228,12 @@ describe('ServiceManager', () => {
     it('should invalidate cache when storing data', async () => {
       serviceManager.registerService(mockService);
       const sheetName = 'invalidate-sheet';
-      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockImplementation(() => {});
-      
+      const spyInvalidate = jest
+        .spyOn(cacheManager, 'invalidateByPrefix')
+        .mockImplementation(() => {});
+
       await serviceManager.store([{ id: 1 }], { sheetName });
-      
+
       expect(spyInvalidate).toHaveBeenCalledWith(expect.stringContaining(sheetName));
       spyInvalidate.mockRestore();
     });
@@ -239,10 +241,12 @@ describe('ServiceManager', () => {
     it('should invalidate cache when deleting rows', async () => {
       serviceManager.registerService(mockService);
       const sheetName = 'delete-sheet';
-      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockImplementation(() => {});
-      
+      const spyInvalidate = jest
+        .spyOn(cacheManager, 'invalidateByPrefix')
+        .mockImplementation(() => {});
+
       await serviceManager.deleteRows({ sheetName, where: () => true });
-      
+
       expect(spyInvalidate).toHaveBeenCalledWith(expect.stringContaining(sheetName));
       spyInvalidate.mockRestore();
     });
@@ -250,10 +254,12 @@ describe('ServiceManager', () => {
     it('should invalidate cache when updating rows', async () => {
       serviceManager.registerService(mockService);
       const sheetName = 'update-sheet';
-      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockImplementation(() => {});
-      
-      await serviceManager.updateRows({ sheetName, where: () => true, set: (r) => r });
-      
+      const spyInvalidate = jest
+        .spyOn(cacheManager, 'invalidateByPrefix')
+        .mockImplementation(() => {});
+
+      await serviceManager.updateRows({ sheetName, where: () => true, set: r => r });
+
       expect(spyInvalidate).toHaveBeenCalledWith(expect.stringContaining(sheetName));
       spyInvalidate.mockRestore();
     });
@@ -264,20 +270,20 @@ describe('ServiceManager', () => {
       serviceManager.registerService(mockService);
       const sheetName = 'migrate-sheet';
       const migrations = [{ version: 1, description: 'v1', actions: [] }];
-      
+
       const spyMigrate = jest.spyOn(mockService, 'migrate').mockResolvedValue({
         success: true,
         fromVersion: 0,
         toVersion: 1,
-        appliedMigrations: 1
+        appliedMigrations: 1,
       });
-      
+
       const result = await serviceManager.migrate({
         spreadsheetId: 'spread-id',
         sheetName,
-        migrations
+        migrations,
       });
-      
+
       expect(result.success).toBe(true);
       expect(result.toVersion).toBe(1);
       expect(spyMigrate).toHaveBeenCalled();
@@ -287,45 +293,49 @@ describe('ServiceManager', () => {
     it('should invalidate cache after successful migration', async () => {
       serviceManager.registerService(mockService);
       const sheetName = 'invalidate-migrate-sheet';
-      
+
       jest.spyOn(mockService, 'migrate').mockResolvedValue({
         success: true,
         fromVersion: 0,
         toVersion: 1,
-        appliedMigrations: 1
+        appliedMigrations: 1,
       });
-      
-      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockImplementation(() => {});
-      
+
+      const spyInvalidate = jest
+        .spyOn(cacheManager, 'invalidateByPrefix')
+        .mockImplementation(() => {});
+
       await serviceManager.migrate({
         spreadsheetId: 'spread-id',
         sheetName,
-        migrations: []
+        migrations: [],
       });
-      
+
       expect(spyInvalidate).toHaveBeenCalledWith(expect.stringContaining(sheetName));
       spyInvalidate.mockRestore();
     });
 
     it('should not invalidate cache if migration fails', async () => {
       serviceManager.registerService(mockService);
-      
+
       jest.spyOn(mockService, 'migrate').mockResolvedValue({
         success: false,
         fromVersion: 0,
         toVersion: 0,
         appliedMigrations: 0,
-        error: 'Failed'
+        error: 'Failed',
       });
-      
-      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockImplementation(() => {});
-      
+
+      const spyInvalidate = jest
+        .spyOn(cacheManager, 'invalidateByPrefix')
+        .mockImplementation(() => {});
+
       await serviceManager.migrate({
         spreadsheetId: 'spread-id',
         sheetName: 'fail-sheet',
-        migrations: []
+        migrations: [],
       });
-      
+
       expect(spyInvalidate).not.toHaveBeenCalled();
       spyInvalidate.mockRestore();
     });
