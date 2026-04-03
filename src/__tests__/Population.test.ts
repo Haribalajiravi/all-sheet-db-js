@@ -83,10 +83,10 @@ describe('ServiceManager Population', () => {
     jest.spyOn(cacheManager, 'invalidateByPrefix').mockResolvedValue();
     jest.spyOn(cacheManager, 'clear').mockResolvedValue();
     jest.spyOn(cacheManager, 'getStats').mockResolvedValue({ size: 0, keys: [] });
-    
+
     // Fallback IDB mock
     (window as any).indexedDB = { open: jest.fn().mockImplementation(() => ({})) };
-    
+
     serviceManager = new ServiceManager();
     mockService = new MockService();
     serviceManager.registerService(mockService);
