@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-04-04
+
+### Fixed
+
+- **Stable Cache Keys**: Fixed an issue where the cache layer would fail to pick up cached data due to unstable JSON key generation for nested options. Implemented recursive stabilization for objects and Dates.
+- **Granular Cache Invalidation**: Specialized cache prefixes to include the sheet Tab name, preventing over-invalidation when multiple tabs in the same spreadsheet are used.
+- **Structural Check Caching**: Added an internal in-memory cache for `ensureSheetHeaderRow` to eliminate redundant API calls during tab switching in React.
+- **Browser Build Parity**: Synchronized many missing core methods to the browser-only build, ensuring parity with the standard entry point.
+
 ## [1.3.0] - 2026-04-03
 
 ### Added
