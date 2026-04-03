@@ -32,6 +32,7 @@ export default function StockWatchlist({
         sheetName: spreadsheetId,
         range: retrieveRange,
         model: modelForSheet,
+        cache: { enabled: true, ttl: 300000 },
       });
       if (res.success && res.data) {
         setStocks(res.data);

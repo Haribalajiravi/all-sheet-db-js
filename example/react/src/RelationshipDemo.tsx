@@ -63,6 +63,7 @@ export default function RelationshipDemo({
         sheetName: selectedId,
         model: CUSTOMER_SHEET_MODEL,
         pagination: { limit: 1 },
+        cache: { enabled: true, ttl: 60000 },
       });
 
       if (!customersCheck.success || !customersCheck.data?.length) {
@@ -79,6 +80,7 @@ export default function RelationshipDemo({
         sheetName: selectedId,
         model: ORDER_SHEET_MODEL,
         pagination: { limit: 1 },
+        cache: { enabled: true, ttl: 60000 },
       });
 
       if (!ordersCheck.success || !ordersCheck.data?.length) {
@@ -94,6 +96,7 @@ export default function RelationshipDemo({
       const custResult = await allSheetDB.retrieve({
         sheetName: selectedId,
         model: CUSTOMER_SHEET_MODEL,
+        cache: { enabled: true, ttl: 300000 },
       });
       if (custResult.success) {
         setCustomers(custResult.data || []);
@@ -113,6 +116,7 @@ export default function RelationshipDemo({
           },
         ],
         sort: [{ column: 'date', order: 'desc' }],
+        cache: { enabled: true, ttl: 300000 },
       });
 
       if (result.success) {

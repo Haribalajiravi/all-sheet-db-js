@@ -134,8 +134,9 @@ export class ServiceManager {
 
       const result = await service.store(data, options);
       if (result.success && this.currentService) {
-        // Invalidate cache for this spreadsheet/sheet combination
-        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+        // Invalidate cache for this specific spreadsheet and tab
+        const tabName = options.model?.sheetName || 'Sheet1';
+        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}:${tabName}`);
       }
       return result;
     } catch (error) {
@@ -160,9 +161,10 @@ export class ServiceManager {
       logger.debug(`Retrieving data from ${this.currentService}`, { sheetName: options.sheetName });
 
       const serviceName = service.name as string;
+      const tabName = options.range || options.model?.sheetName || 'Sheet1';
       const cacheKey =
         options.cache?.key ||
-        cacheManager.generateKey(serviceName, options.sheetName, options as any);
+        cacheManager.generateKey(serviceName, `${options.sheetName}:${tabName}`, options as any);
 
       // Check cache if enabled and no force fetch
       if (options.cache?.enabled && !options.cache?.forceFetch) {
@@ -261,8 +263,9 @@ export class ServiceManager {
       logger.debug(`Deleting rows from ${this.currentService}`, { sheetName: options.sheetName });
       const result = await service.deleteRows(options);
       if (result.success && this.currentService) {
-        // Invalidate cache for this sheet
-        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+        // Invalidate cache for this specific spreadsheet and tab
+        const tabName = options.range || options.model?.sheetName || 'Sheet1';
+        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}:${tabName}`);
       }
       return result;
     } catch (error) {
@@ -287,8 +290,9 @@ export class ServiceManager {
       logger.debug(`Updating rows in ${this.currentService}`, { sheetName: options.sheetName });
       const result = await service.updateRows(options);
       if (result.success && this.currentService) {
-        // Invalidate cache for this sheet
-        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+        // Invalidate cache for this specific spreadsheet and tab
+        const tabName = options.range || options.model?.sheetName || 'Sheet1';
+        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}:${tabName}`);
       }
       return result;
     } catch (error) {
@@ -314,7 +318,7 @@ export class ServiceManager {
       const result = await service.migrate(options);
       if (result.success && this.currentService) {
         // Invalidate cache since schema/data changed
-        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.spreadsheetId}:${options.sheetName}`);
       }
       return result;
     } catch (error) {

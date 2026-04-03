@@ -55,6 +55,8 @@ export class GoogleSheetsService implements ISpreadsheetService {
   private initialized = false;
   private gisLoadPromise: Promise<void> | null = null;
   private gapiClientLoadPromise: Promise<void> | null = null;
+  /** In-memory cache for sheet headers to avoid redundant API calls on mount */
+  private headerCache = new Map<string, { values: string[]; timestamp: number }>();
 
   // ╭──────────────────────────────────────────────────────────────────────╮
   // │  Initialization                                                     │
@@ -438,6 +440,20 @@ export class GoogleSheetsService implements ISpreadsheetService {
     headerValues: unknown[];
   }): Promise<void> {
     const { spreadsheetId, sheetTabName, headerValues } = params;
+    const cacheKey = `${spreadsheetId}:${sheetTabName}`;
+    const cached = this.headerCache.get(cacheKey);
+    const newHeader = headerValues.map(h => String(h ?? '').trim());
+
+    // If we checked this recently and it matched, skip the network calls
+    if (cached && Date.now() - cached.timestamp < 300000) {
+      if (
+        cached.values.length === newHeader.length &&
+        cached.values.every((h, i) => h === newHeader[i])
+      ) {
+        return;
+      }
+    }
+
     await this.ensureGapiClientInitialized();
     await this.ensureAccessToken();
 
@@ -474,12 +490,13 @@ export class GoogleSheetsService implements ISpreadsheetService {
     }
 
     // 4. Header matches → nothing to do
-    const newHeader = headerValues.map(h => String(h ?? '').trim());
     const oldHeaderStr = oldHeader.map(h => String(h ?? '').trim());
     if (
       newHeader.length === oldHeaderStr.length &&
       newHeader.every((h, i) => h === oldHeaderStr[i])
     ) {
+      // Update cache on success
+      this.headerCache.set(cacheKey, { values: newHeader, timestamp: Date.now() });
       return;
     }
 

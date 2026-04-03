@@ -36,23 +36,28 @@ export class CacheManager {
     }
 
     this.dbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(CacheManager.DB_NAME, CacheManager.DB_VERSION);
+      try {
+        const request = window.indexedDB.open(CacheManager.DB_NAME, CacheManager.DB_VERSION);
 
-      request.onerror = () => {
-        logger.error('Failed to open IndexedDB for caching');
-        reject(request.error);
-      };
+        request.onerror = () => {
+          logger.error('Failed to open IndexedDB for caching');
+          reject(request.error);
+        };
 
-      request.onsuccess = () => {
-        resolve(request.result);
-      };
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
 
-      request.onupgradeneeded = (event: any) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains(CacheManager.STORE_NAME)) {
-          db.createObjectStore(CacheManager.STORE_NAME);
-        }
-      };
+        request.onupgradeneeded = (event: any) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(CacheManager.STORE_NAME)) {
+            db.createObjectStore(CacheManager.STORE_NAME);
+          }
+        };
+      } catch (err) {
+        logger.error('Error initiating IndexedDB open:', err);
+        reject(err);
+      }
     });
 
     return this.dbPromise;
@@ -161,19 +166,21 @@ export class CacheManager {
       const db = await this.getDB();
       const keysToRemove: string[] = [];
 
-      // We need to iterate over all keys to find matches
+      // Use a bound range for efficient prefix matching
+      // Since keys are strings like "service:sheetId:options", this works perfectly.
+      const range = IDBKeyRange.bound(partialKey, partialKey + '\uffff');
+
       await new Promise<void>((resolve, reject) => {
         const transaction = db.transaction([CacheManager.STORE_NAME], 'readonly');
         const store = transaction.objectStore(CacheManager.STORE_NAME);
-        const request = store.openKeyCursor();
+        
+        // Use openCursor instead of openKeyCursor for better compatibility
+        const request = store.openCursor(range);
 
         request.onsuccess = (event: any) => {
           const cursor = event.target.result;
           if (cursor) {
-            const key = cursor.key.toString();
-            if (key.includes(partialKey)) {
-              keysToRemove.push(key);
-            }
+            keysToRemove.push(cursor.key.toString());
             cursor.continue();
           } else {
             resolve();
@@ -224,19 +231,43 @@ export class CacheManager {
   }
 
   /**
-   * Generate a unique key for a request
+   * Generate a unique key for a request.
+   * Performs deep sorting of the options object to ensure stable keys.
    */
   generateKey(serviceName: string, sheetName: string, options: Record<string, unknown>): string {
-    const sortedOptions = Object.keys(options)
-      .sort()
-      .reduce((acc, key) => {
-        if (key !== 'cache' && typeof options[key] !== 'function') {
-          acc[key] = options[key];
-        }
-        return acc;
-      }, {} as any);
+    const normalize = (val: any): any => {
+      if (val === null || typeof val !== 'object') {
+        return val;
+      }
+      
+      // Handle Date objects explicitly
+      if (val instanceof Date) {
+        return val.toISOString();
+      }
 
-    return `${serviceName}:${sheetName}:${JSON.stringify(sortedOptions)}`;
+      if (Array.isArray(val)) {
+        return val.map(normalize);
+      }
+
+      // If it's a non-plain object (has a different constructor than Object), 
+      // but not a Date/Array, we check if it has a toJSON method
+      if (val.constructor !== Object && typeof val.toJSON === 'function') {
+        return normalize(val.toJSON());
+      }
+
+      const sortedObj: any = {};
+      Object.keys(val)
+        .sort()
+        .forEach(k => {
+          if (k !== 'cache' && typeof val[k] !== 'function' && val[k] !== undefined) {
+            sortedObj[k] = normalize(val[k]);
+          }
+        });
+      return sortedObj;
+    };
+
+    const normalizedOptions = normalize(options);
+    return `${serviceName}:${sheetName}:${JSON.stringify(normalizedOptions)}`;
   }
 
   /**

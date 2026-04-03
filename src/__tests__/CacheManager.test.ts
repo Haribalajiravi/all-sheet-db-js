@@ -52,14 +52,21 @@ describe('CacheManager (IndexedDB Mock)', () => {
         setTimeout(() => req.onsuccess?.({ target: req }), 0);
         return req;
       }),
-      openKeyCursor: jest.fn(() => {
+      openCursor: jest.fn((range) => {
         const req = new IDBRequestMock();
-        const keys = Object.keys(store);
+        const allKeys = Object.keys(store).sort();
+        let filteredKeys = allKeys;
+
+        if (range && range.lower) {
+          filteredKeys = allKeys.filter(k => k >= range.lower && (!range.upper || k <= range.upper));
+        }
+
         let index = 0;
         const iterate = () => {
-          if (index < keys.length) {
+          if (index < filteredKeys.length) {
             req.result = {
-              key: keys[index],
+              key: filteredKeys[index],
+              toString: () => filteredKeys[index],
               continue: () => {
                 index++;
                 iterate();
@@ -83,6 +90,11 @@ describe('CacheManager (IndexedDB Mock)', () => {
       }),
       objectStoreNames: { contains: () => true },
       close: jest.fn(),
+    };
+
+    // Set Up globals
+    (global as any).IDBKeyRange = {
+      bound: jest.fn((lower, upper) => ({ lower, upper })),
     };
 
     (window as any).indexedDB = {

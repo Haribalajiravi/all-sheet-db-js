@@ -1,6 +1,6 @@
 {
   "name": "all-sheet-db-js",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Google Sheets as a database with relational joins and high-performance IndexedDB caching. Store, retrieve, and populate related data with a typed, ORM-like API.",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",

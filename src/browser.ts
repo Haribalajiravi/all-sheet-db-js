@@ -10,17 +10,24 @@ import { GoogleSheetsService } from './services/google-sheets/GoogleSheetsServic
 
 export { GoogleSheetsService } from './services/google-sheets/GoogleSheetsService';
 import { logger, LogLevel } from './utils/logger';
-import type {
+import {
   IntegrationConfig,
   ServiceType,
   StoreOptions,
   StoreResult,
   RetrieveOptions,
   RetrieveResult,
+  DeleteOptions,
+  DeleteResult,
+  UpdateOptions,
+  UpdateResult,
+  MigrationOptions,
+  MigrationResult,
   AuthCredentials,
   AuthToken,
 } from './types';
 import { ServiceError } from './utils/errors';
+import { cacheManager } from './core/CacheManager';
 
 export type {
   IntegrationConfig,
@@ -29,6 +36,12 @@ export type {
   StoreResult,
   RetrieveOptions,
   RetrieveResult,
+  DeleteOptions,
+  DeleteResult,
+  UpdateOptions,
+  UpdateResult,
+  MigrationOptions,
+  MigrationResult,
   AuthCredentials,
   AuthToken,
   SheetModel,
@@ -60,6 +73,11 @@ export class AllSheetDB {
 
   setService(serviceName: ServiceType): void {
     this.serviceManager.setCurrentService(serviceName);
+  }
+
+  getCurrentService(): ServiceType | null {
+    const service = this.serviceManager.getCurrentService();
+    return service ? (service.name as ServiceType) : null;
   }
 
   async authenticate(credentials: AuthCredentials): Promise<AuthToken> {
@@ -97,6 +115,33 @@ export class AllSheetDB {
 
   async retrieve<T = unknown>(options: RetrieveOptions): Promise<RetrieveResult<T>> {
     return await this.serviceManager.retrieve<T>(options);
+  }
+
+  async deleteRows<T = unknown>(options: DeleteOptions<T>): Promise<DeleteResult> {
+    return await this.serviceManager.deleteRows<T>(options);
+  }
+
+  async updateRows<T = unknown>(options: UpdateOptions<T>): Promise<UpdateResult> {
+    return await this.serviceManager.updateRows<T>(options);
+  }
+
+  async migrate(options: MigrationOptions): Promise<MigrationResult> {
+    return await this.serviceManager.migrate(options);
+  }
+
+  async clearCache(): Promise<void> {
+    await cacheManager.clear();
+  }
+
+  async invalidateCache(sheetName: string): Promise<void> {
+    const service = this.getCurrentService();
+    if (service) {
+      await cacheManager.invalidateByPrefix(`${service}:${sheetName}`);
+    }
+  }
+
+  async getCacheStats(): Promise<{ size: number; keys: string[] }> {
+    return await cacheManager.getStats();
   }
 
   setLogLevel(level: LogLevel): void {
