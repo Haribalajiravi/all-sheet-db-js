@@ -214,25 +214,25 @@ export class AllSheetDB {
   /**
    * Clear all cached data
    */
-  clearCache(): void {
-    cacheManager.clear();
+  async clearCache(): Promise<void> {
+    await cacheManager.clear();
   }
 
   /**
    * Invalidate cache for a specific spreadsheet/sheet
    */
-  invalidateCache(sheetName: string): void {
+  async invalidateCache(sheetName: string): Promise<void> {
     const service = this.getCurrentService();
     if (service) {
-      cacheManager.invalidateByPrefix(`${service}:${sheetName}`);
+      await cacheManager.invalidateByPrefix(`${service}:${sheetName}`);
     }
   }
 
   /**
    * Get cache statistics
    */
-  getCacheStats(): { size: number; keys: string[] } {
-    return cacheManager.getStats();
+  async getCacheStats(): Promise<{ size: number; keys: string[] }> {
+    return await cacheManager.getStats();
   }
 }
 

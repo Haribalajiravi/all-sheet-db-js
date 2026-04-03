@@ -12,6 +12,7 @@ export default function DatabaseView({
   const [migrationLog, setMigrationLog] = useState<string[]>([]);
   const [currentVersion, setCurrentVersion] = useState<string | number>('?');
   const [queryResult, setQueryResult] = useState<{ count: number; sample: any[] } | null>(null);
+  const [cacheStats, setCacheStats] = useState<{ size: number; keys: string[] }>({ size: 0, keys: [] });
 
   // Fetch current version on load
   const loadVersion = async () => {
@@ -27,8 +28,20 @@ export default function DatabaseView({
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const stats = await allSheetDB.getCacheStats();
+      setCacheStats(stats);
+    } catch (e) {
+      // ignore
+    }
+  };
+
   useEffect(() => {
-    if (selectedId) loadVersion();
+    if (selectedId) {
+      loadVersion();
+      loadStats();
+    }
   }, [selectedId]);
 
   const handleRunMigration = async () => {
@@ -88,6 +101,7 @@ export default function DatabaseView({
       if (res.success && res.data) {
         setQueryResult({ count: res.data.length, sample: res.data.slice(0, 5) });
         setStatus(`Query returned ${res.data.length} results`);
+        await loadStats();
       }
     } catch (e) {
       setStatus(formatErrorMessage(e));
@@ -98,6 +112,7 @@ export default function DatabaseView({
 
   const clearLocalCache = async () => {
     await allSheetDB.clearCache();
+    await loadStats();
     setStatus('Cache cleared');
   };
 
@@ -156,7 +171,7 @@ export default function DatabaseView({
             <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-400 text-xs font-mono uppercase tracking-tighter">Middleware Active</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            The cache layer (Memory + Cookie storage) prevents redundant API calls. 
+            The cache layer (Persistent <strong>IndexedDB</strong>) prevents redundant API calls. 
             Writes automatically invalidate the relevant cache handles.
           </p>
           <div className="flex gap-2">
@@ -167,16 +182,16 @@ export default function DatabaseView({
                 <span className="text-muted-foreground">Strategy</span>
                 <span className="font-mono text-xs text-blue-400">Write-Through Cache</span>
              </div>
-             <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="px-3 py-2 rounded bg-black/20 border border-white/5">
                    <div className="text-[9px] uppercase text-muted-foreground mb-1">State</div>
-                   <div className="text-sm font-bold text-emerald-400">OPTIMIZED</div>
+                   <div className="text-sm font-bold text-emerald-400">{cacheStats.size > 0 ? 'ACTIVE' : 'OPTIMIZED'}</div>
                 </div>
                 <div className="px-3 py-2 rounded bg-black/20 border border-white/5">
-                   <div className="text-[9px] uppercase text-muted-foreground mb-1">TTL</div>
-                   <div className="text-sm font-bold">5 MINS</div>
+                   <div className="text-[9px] uppercase text-muted-foreground mb-1">Cached Items</div>
+                   <div className="text-sm font-bold">{cacheStats.size}</div>
                 </div>
-             </div>
+              </div>
           </div>
         </div>
       </div>

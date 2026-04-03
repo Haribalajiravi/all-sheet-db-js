@@ -18,12 +18,13 @@ import {
 import ExpenseTracker from './ExpenseTracker';
 import StockWatchlist from './StockWatchlist';
 import DatabaseView from './DatabaseView';
+import RelationshipDemo from './RelationshipDemo';
 import { expenseHeaderValues, EXPENSE_SHEET_MODEL } from './expenseModel';
 
 const LS_CLIENT = 'expense_demo_oauth_client_id';
 const LS_SPREADSHEET = 'expense_demo_spreadsheet_id';
 
-type Tab = 'expenses' | 'watchlist' | 'database';
+type Tab = 'expenses' | 'watchlist' | 'database' | 'relationship';
 
 /**
  * Root shell that:
@@ -272,6 +273,7 @@ export default function App() {
             {([
               { key: 'expenses' as Tab, label: '💰 Expenses' },
               { key: 'watchlist' as Tab, label: '📈 Stock Watchlist' },
+              { key: 'relationship' as Tab, label: '🔗 Joins/Populate' },
               { key: 'database' as Tab, label: '🛡️ Database' },
             ]).map(({ key, label }) => (
               <button
@@ -293,9 +295,10 @@ export default function App() {
 
         {/* ── Tab content ──────────────────────────────────────────── */}
         <div className="pt-2">
-          {activeTab === 'expenses' && <ExpenseTracker {...tabProps} />}
-          {activeTab === 'watchlist' && <StockWatchlist {...tabProps} />}
-          {activeTab === 'database' && <DatabaseView {...tabProps} />}
+          { activeTab === 'expenses' && <ExpenseTracker {...tabProps} /> }
+          { activeTab === 'watchlist' && <StockWatchlist {...tabProps} /> }
+          { activeTab === 'relationship' && <RelationshipDemo {...tabProps} /> }
+          { activeTab === 'database' && <DatabaseView {...tabProps} /> }
         </div>
       </div>
     </div>

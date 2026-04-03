@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-03
+
+### Added
+
+- **Relational Data Population**: Support for `populate` queries to join data across multiple sheets or tabs based on primary/foreign keys.
+- **IndexedDB Caching**: Migrated from `localStorage` to **IndexedDB** for the caching layer. This provides significantly higher storage capacity (limitless vs 5MB), better performance for large datasets, and non-blocking asynchronous operations.
+- **Async Cache API**: All cache management methods (`clearCache`, `invalidateCache`, `getCacheStats`) are now asynchronous (`Promise`-based).
+- **Relational Tab Support**: Improved `ServiceManager` to handle cross-tab joins within the same spreadsheet automatically.
+
+### Changed
+
+- **Asynchronous Data Flow**: Updated core library internals to correctly `await` cache operations, leading to smoother performance.
+- **Example App Upgrade**: Enhanced the React example app with a "Joins/Populate" demo and a live "Cache Stats" monitor.
+
 ## [1.2.0] - 2026-03-31
 
 ### Added

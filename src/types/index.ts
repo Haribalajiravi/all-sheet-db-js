@@ -101,6 +101,22 @@ export interface SortOption {
   order: 'asc' | 'desc';
 }
 
+export interface PopulateOptions {
+  /** The field in the current sheet that contains the foreign ID */
+  localField: string;
+  /** The sheet name (tab) to join with. For Google Sheets, this is the tab name. */
+  from: string;
+  /**
+   * The spreadsheet ID or common name of the file to join with.
+   * If omitted, defaults to the same file as the source sheet.
+   */
+  fromSheetName?: string;
+  /** The field in the target sheet to match against */
+  foreignField: string;
+  /** The name of the field to add to the result (defaults to localField if not specified) */
+  as?: string;
+}
+
 export interface RetrieveOptions {
   /** Spreadsheet ID or common name */
   sheetName: string;
@@ -118,6 +134,8 @@ export interface RetrieveOptions {
   groupBy?: string | string[];
   /** Optional cache configuration */
   cache?: CacheOptions;
+  /** Populate related data from other sheets */
+  populate?: PopulateOptions[];
 }
 
 export interface StoreResult {

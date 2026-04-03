@@ -70,8 +70,39 @@ describe('ServiceManager', () => {
   let mockService: MockService;
 
   beforeEach(() => {
+    cacheManager.reset();
+
+    const mockRequest = { 
+      onsuccess: null, 
+      onerror: null, 
+      result: {
+        transaction: () => ({
+          objectStore: () => ({
+            get: () => ({ onsuccess: null }),
+            put: () => ({ onsuccess: null }),
+            delete: () => ({ onsuccess: null }),
+            clear: () => ({ onsuccess: null }),
+            openKeyCursor: () => ({ onsuccess: null }),
+          })
+        }),
+        objectStoreNames: { contains: () => true }
+      }
+    };
+
+    (window as any).indexedDB = {
+      open: jest.fn().mockImplementation(() => {
+        const req = { ...mockRequest };
+        setTimeout(() => {
+          if (req.onsuccess) (req as any).onsuccess({ target: req });
+        }, 0);
+        return req;
+      }),
+    };
+
     serviceManager = new ServiceManager();
     mockService = new MockService();
+
+    jest.useRealTimers();
   });
 
   describe('registerService', () => {
@@ -182,8 +213,9 @@ describe('ServiceManager', () => {
       const sheetName = 'cached-sheet';
       const cachedData = [{ id: 1, cached: true }];
 
-      const spySet = jest.spyOn(cacheManager, 'set');
-      const spyGet = jest.spyOn(cacheManager, 'get').mockReturnValue(cachedData);
+      const spySet = jest.spyOn(cacheManager, 'set').mockResolvedValue();
+      const spyGet = jest.spyOn(cacheManager, 'get').mockResolvedValue(cachedData);
+      const spyGetTs = jest.spyOn(cacheManager, 'getTimestamp').mockResolvedValue(Date.now());
 
       const result = await serviceManager.retrieve({
         sheetName,
@@ -197,6 +229,7 @@ describe('ServiceManager', () => {
 
       spyGet.mockRestore();
       spySet.mockRestore();
+      spyGetTs.mockRestore();
     });
 
     it('should fetch from service and save to cache on miss', async () => {
@@ -205,8 +238,8 @@ describe('ServiceManager', () => {
       const freshData = [{ id: 1, fresh: true }];
 
       jest.spyOn(mockService, 'retrieve').mockResolvedValue({ success: true, data: freshData });
-      const spySet = jest.spyOn(cacheManager, 'set').mockImplementation(() => {});
-      const spyGet = jest.spyOn(cacheManager, 'get').mockReturnValue(null);
+      const spySet = jest.spyOn(cacheManager, 'set').mockResolvedValue();
+      const spyGet = jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
 
       const result = await serviceManager.retrieve({
         sheetName,
@@ -230,7 +263,7 @@ describe('ServiceManager', () => {
       const sheetName = 'invalidate-sheet';
       const spyInvalidate = jest
         .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockImplementation(() => {});
+        .mockResolvedValue();
 
       await serviceManager.store([{ id: 1 }], { sheetName });
 
@@ -243,7 +276,7 @@ describe('ServiceManager', () => {
       const sheetName = 'delete-sheet';
       const spyInvalidate = jest
         .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockImplementation(() => {});
+        .mockResolvedValue();
 
       await serviceManager.deleteRows({ sheetName, where: () => true });
 
@@ -256,7 +289,7 @@ describe('ServiceManager', () => {
       const sheetName = 'update-sheet';
       const spyInvalidate = jest
         .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockImplementation(() => {});
+        .mockResolvedValue();
 
       await serviceManager.updateRows({ sheetName, where: () => true, set: r => r });
 
@@ -303,7 +336,7 @@ describe('ServiceManager', () => {
 
       const spyInvalidate = jest
         .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockImplementation(() => {});
+        .mockResolvedValue();
 
       await serviceManager.migrate({
         spreadsheetId: 'spread-id',
@@ -328,7 +361,7 @@ describe('ServiceManager', () => {
 
       const spyInvalidate = jest
         .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockImplementation(() => {});
+        .mockResolvedValue();
 
       await serviceManager.migrate({
         spreadsheetId: 'spread-id',

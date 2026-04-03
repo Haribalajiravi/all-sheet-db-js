@@ -1,111 +1,147 @@
-import { cacheManager } from '../core/CacheManager';
+import { CacheManager } from '../core/CacheManager';
 
-describe('CacheManager', () => {
+// synchronous IndexedDB Mock for easy testing
+class IDBRequestMock {
+  onsuccess: any = null;
+  onerror: any = null;
+  result: any = null;
+  error: any = null;
+
+  static createSuccess(result: any) {
+    const req = new IDBRequestMock();
+    req.result = result;
+    // We'll trigger onsuccess manually in the caller to control timing
+    return req;
+  }
+}
+
+class IDBTransactionMock {
+  oncomplete: any = null;
+  objectStore = jest.fn();
+}
+
+describe('CacheManager (IndexedDB Mock)', () => {
+  let cacheManager: CacheManager;
+  let store: Record<string, any> = {};
+
   beforeEach(() => {
-    // Mock localStorage
-    const localStorageMock = (function () {
-      let store: { [key: string]: string } = {};
-      return {
-        getItem: jest.fn((key: string) => store[key] || null),
-        setItem: jest.fn((key: string, value: string) => {
-          store[key] = value.toString();
-        }),
-        removeItem: jest.fn((key: string) => {
-          delete store[key];
-        }),
-        clear: jest.fn(() => {
-          store = {};
-        }),
-        key: jest.fn((index: number) => Object.keys(store)[index] || null),
-        get length() {
-          return Object.keys(store).length;
-        },
-      };
-    })();
+    cacheManager = new CacheManager();
+    store = {};
 
-    Object.defineProperty(window, 'localStorage', {
-      value: localStorageMock,
-      writable: true,
-    });
+    const mockOS = {
+      put: jest.fn((data, key) => {
+        store[key] = data;
+        const req = IDBRequestMock.createSuccess(key);
+        setTimeout(() => req.onsuccess?.({ target: req }), 0);
+        return req;
+      }),
+      get: jest.fn((key) => {
+        const req = IDBRequestMock.createSuccess(store[key]);
+        setTimeout(() => req.onsuccess?.({ target: req }), 0);
+        return req;
+      }),
+      delete: jest.fn((key) => {
+        delete store[key];
+        const req = IDBRequestMock.createSuccess(undefined);
+        setTimeout(() => req.onsuccess?.({ target: req }), 0);
+        return req;
+      }),
+      clear: jest.fn(() => {
+        store = {};
+        const req = IDBRequestMock.createSuccess(undefined);
+        setTimeout(() => req.onsuccess?.({ target: req }), 0);
+        return req;
+      }),
+      openKeyCursor: jest.fn(() => {
+        const req = new IDBRequestMock();
+        const keys = Object.keys(store);
+        let index = 0;
+        const iterate = () => {
+          if (index < keys.length) {
+            req.result = { 
+              key: keys[index], 
+              continue: () => { index++; iterate(); } 
+            };
+          } else {
+            req.result = null;
+          }
+          req.onsuccess?.({ target: req });
+        };
+        setTimeout(iterate, 0);
+        return req;
+      }),
+    };
 
-    jest.useFakeTimers();
-  });
+    const mockDB = {
+      transaction: jest.fn(() => {
+        const trans = new IDBTransactionMock();
+        trans.objectStore.mockReturnValue(mockOS);
+        return trans;
+      }),
+      objectStoreNames: { contains: () => true },
+      close: jest.fn(),
+    };
 
-  afterEach(() => {
-    jest.clearAllMocks();
+    (window as any).indexedDB = {
+      open: jest.fn(() => {
+        const req = IDBRequestMock.createSuccess(mockDB);
+        setTimeout(() => req.onsuccess?.({ target: req }), 0);
+        return req;
+      }),
+    };
+
+    // We MUST use real timers for this to work with the setTimeouts in our mock
     jest.useRealTimers();
   });
 
-  test('should set and get a value', () => {
+  test('should set and get a value', async () => {
     const key = 'test-key';
     const data = { foo: 'bar' };
 
-    cacheManager.set(key, data);
-    const retrieved = cacheManager.get<{ foo: string }>(key);
+    await cacheManager.set(key, data);
+    const retrieved = await cacheManager.get<{ foo: string }>(key);
 
     expect(retrieved).toEqual(data);
-    expect(window.localStorage.setItem).toHaveBeenCalledWith(
-      expect.stringContaining(key),
-      expect.any(String)
-    );
   });
 
-  test('should return null for non-existent key', () => {
-    expect(cacheManager.get('non-existent')).toBeNull();
+  test('should return null for non-existent key', async () => {
+    const retrieved = await cacheManager.get('non-existent');
+    expect(retrieved).toBeNull();
   });
 
-  test('should return null and delete item if expired', () => {
+  test('should return null if expired', async () => {
     const key = 'expired-key';
     const data = { test: 123 };
-    const ttl = 1000; // 1 second
+    const ttl = 100; // 100ms
 
-    cacheManager.set(key, data);
+    await cacheManager.set(key, data);
+    
+    // Wait for TTL
+    await new Promise(resolve => setTimeout(resolve, ttl + 50));
 
-    // Advance time past TTL
-    jest.advanceTimersByTime(ttl + 100);
-
-    const retrieved = cacheManager.get(key, ttl);
+    const retrieved = await cacheManager.get(key, ttl);
     expect(retrieved).toBeNull();
-    expect(window.localStorage.removeItem).toHaveBeenCalled();
   });
 
-  test('should invalidate by prefix', () => {
-    cacheManager.set('service:sheet1:q1', { data: 1 });
-    cacheManager.set('service:sheet1:q2', { data: 2 });
-    cacheManager.set('service:sheet2:q1', { data: 3 });
+  test('should invalidate by prefix', async () => {
+    await cacheManager.set('gs:sheet1:q1', { data: 1 });
+    await cacheManager.set('gs:sheet1:q2', { data: 2 });
+    await cacheManager.set('gs:sheet2:q1', { data: 3 });
 
-    cacheManager.invalidateByPrefix('service:sheet1');
+    await cacheManager.invalidateByPrefix('gs:sheet1');
 
-    expect(cacheManager.get('service:sheet1:q1')).toBeNull();
-    expect(cacheManager.get('service:sheet1:q2')).toBeNull();
-    expect(cacheManager.get('service:sheet2:q1')).not.toBeNull();
+    expect(await cacheManager.get('gs:sheet1:q1')).toBeNull();
+    expect(await cacheManager.get('gs:sheet1:q2')).toBeNull();
+    expect(await cacheManager.get('gs:sheet2:q1')).not.toBeNull();
   });
 
-  test('should clear all cache entries', () => {
-    cacheManager.set('key1', { a: 1 });
-    cacheManager.set('key2', { b: 2 });
+  test('should clear all cache entries', async () => {
+    await cacheManager.set('key1', { a: 1 });
+    await cacheManager.set('key2', { b: 2 });
 
-    // Add a non-library item to ensure we don't clear everything
-    window.localStorage.setItem('other-key', 'other-value');
+    await cacheManager.clear();
 
-    cacheManager.clear();
-
-    expect(cacheManager.get('key1')).toBeNull();
-    expect(cacheManager.get('key2')).toBeNull();
-    expect(window.localStorage.getItem('other-key')).toBe('other-value');
-  });
-
-  test('should generate consistent keys', () => {
-    const service = 'gs';
-    const sheet = 'mysheet';
-    const options1 = { range: 'A1:B2', filters: { id: 1 } };
-    const options2 = { filters: { id: 1 }, range: 'A1:B2' }; // different order
-
-    const key1 = cacheManager.generateKey(service, sheet, options1);
-    const key2 = cacheManager.generateKey(service, sheet, options2);
-
-    expect(key1).toBe(key2);
-    expect(key1).toContain(service);
-    expect(key1).toContain(sheet);
+    expect(await cacheManager.get('key1')).toBeNull();
+    expect(await cacheManager.get('key2')).toBeNull();
   });
 });

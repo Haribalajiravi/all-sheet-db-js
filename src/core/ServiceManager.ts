@@ -18,6 +18,7 @@ import {
   MigrationResult,
   FilterCondition,
   SortOption,
+  PopulateOptions,
 } from '../types';
 import { logger } from '../utils/logger';
 import { ConfigurationError, ServiceError } from '../utils/errors';
@@ -134,7 +135,7 @@ export class ServiceManager {
       const result = await service.store(data, options);
       if (result.success && this.currentService) {
         // Invalidate cache for this spreadsheet/sheet combination
-        cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
       }
       return result;
     } catch (error) {
@@ -166,14 +167,14 @@ export class ServiceManager {
       // Check cache if enabled and no force fetch
       if (options.cache?.enabled && !options.cache?.forceFetch) {
         const ttl = options.cache.ttl || 300000;
-        const cachedData = cacheManager.get<T[]>(cacheKey, ttl);
+        const cachedData = await cacheManager.get<T[]>(cacheKey, ttl);
         if (cachedData !== null) {
           logger.info(`Cache hit for ${cacheKey}`);
           return {
             success: true,
             data: cachedData,
             fromCache: true,
-            timestamp: cacheManager.getTimestamp(cacheKey) || undefined,
+            timestamp: (await cacheManager.getTimestamp(cacheKey)) || undefined,
           };
         }
       }
@@ -189,6 +190,11 @@ export class ServiceManager {
         // Advanced Filtering
         if (options.filters) {
           processedData = this.applyFilters(processedData, options.filters);
+        }
+
+        // Population (Joins)
+        if (options.populate && options.populate.length > 0) {
+          processedData = await this.applyPopulation(processedData, options.populate, options);
         }
 
         // Sorting
@@ -211,7 +217,7 @@ export class ServiceManager {
 
       // Save to cache if enabled
       if (result.success && result.data && options.cache?.enabled && this.currentService) {
-        cacheManager.set(cacheKey, result.data);
+        await cacheManager.set(cacheKey, result.data);
       }
 
       return {
@@ -256,7 +262,7 @@ export class ServiceManager {
       const result = await service.deleteRows(options);
       if (result.success && this.currentService) {
         // Invalidate cache for this sheet
-        cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
       }
       return result;
     } catch (error) {
@@ -282,7 +288,7 @@ export class ServiceManager {
       const result = await service.updateRows(options);
       if (result.success && this.currentService) {
         // Invalidate cache for this sheet
-        cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
       }
       return result;
     } catch (error) {
@@ -308,7 +314,7 @@ export class ServiceManager {
       const result = await service.migrate(options);
       if (result.success && this.currentService) {
         // Invalidate cache since schema/data changed
-        cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
+        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}`);
       }
       return result;
     } catch (error) {
@@ -394,5 +400,60 @@ export class ServiceManager {
     };
 
     return group(data, 0);
+  }
+
+  private async applyPopulation(
+    data: any[],
+    populate: PopulateOptions[],
+    originalOptions: RetrieveOptions,
+  ): Promise<any[]> {
+    const resultData = [...data];
+
+    for (const pop of populate) {
+      const { from, localField, foreignField, as, fromSheetName } = pop;
+      const targetField = as || localField;
+
+      try {
+        // Fetch data from the related sheet
+        // We use this.retrieve to benefit from caching and consistent processing
+        const relatedResult = await this.retrieve({
+          // If a spreadsheet ID is specified, use it.
+          // Otherwise, reuse the parent spreadsheet's ID (essential for Google Sheets tabs)
+          sheetName: fromSheetName || originalOptions.sheetName,
+          // 'from' represents the tab name in the target spreadsheet
+          range: from,
+          // Use default cache settings for population to improve performance
+          cache: { enabled: true, ttl: 300000 },
+        });
+
+        if (relatedResult.success && relatedResult.data) {
+          const relatedData = relatedResult.data;
+
+          // Create a map for faster lookups (O(1) instead of O(N^2))
+          const relatedMap = new Map();
+          relatedData.forEach((item: any) => {
+            const key = item[foreignField];
+            if (key !== undefined && key !== null) {
+              relatedMap.set(String(key), item);
+            }
+          });
+
+          // Attach related data to each row
+          resultData.forEach(row => {
+            const lookupValue = row[localField];
+            if (lookupValue !== undefined && lookupValue !== null) {
+              row[targetField] = relatedMap.get(String(lookupValue)) || null;
+            } else {
+              row[targetField] = null;
+            }
+          });
+        }
+      } catch (error) {
+        logger.error(`Population failed for sheet "${from}":`, error);
+        // Continue with other populations even if one fails
+      }
+    }
+
+    return resultData;
   }
 }
