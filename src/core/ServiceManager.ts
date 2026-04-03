@@ -136,7 +136,9 @@ export class ServiceManager {
       if (result.success && this.currentService) {
         // Invalidate cache for this specific spreadsheet and tab
         const tabName = options.model?.sheetName || 'Sheet1';
-        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}:${tabName}`);
+        await cacheManager.invalidateByPrefix(
+          `${this.currentService}:${options.sheetName}:${tabName}`
+        );
       }
       return result;
     } catch (error) {
@@ -265,7 +267,9 @@ export class ServiceManager {
       if (result.success && this.currentService) {
         // Invalidate cache for this specific spreadsheet and tab
         const tabName = options.range || options.model?.sheetName || 'Sheet1';
-        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}:${tabName}`);
+        await cacheManager.invalidateByPrefix(
+          `${this.currentService}:${options.sheetName}:${tabName}`
+        );
       }
       return result;
     } catch (error) {
@@ -292,7 +296,9 @@ export class ServiceManager {
       if (result.success && this.currentService) {
         // Invalidate cache for this specific spreadsheet and tab
         const tabName = options.range || options.model?.sheetName || 'Sheet1';
-        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.sheetName}:${tabName}`);
+        await cacheManager.invalidateByPrefix(
+          `${this.currentService}:${options.sheetName}:${tabName}`
+        );
       }
       return result;
     } catch (error) {
@@ -318,7 +324,9 @@ export class ServiceManager {
       const result = await service.migrate(options);
       if (result.success && this.currentService) {
         // Invalidate cache since schema/data changed
-        await cacheManager.invalidateByPrefix(`${this.currentService}:${options.spreadsheetId}:${options.sheetName}`);
+        await cacheManager.invalidateByPrefix(
+          `${this.currentService}:${options.spreadsheetId}:${options.sheetName}`
+        );
       }
       return result;
     } catch (error) {

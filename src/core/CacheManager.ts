@@ -173,7 +173,7 @@ export class CacheManager {
       await new Promise<void>((resolve, reject) => {
         const transaction = db.transaction([CacheManager.STORE_NAME], 'readonly');
         const store = transaction.objectStore(CacheManager.STORE_NAME);
-        
+
         // Use openCursor instead of openKeyCursor for better compatibility
         const request = store.openCursor(range);
 
@@ -239,7 +239,7 @@ export class CacheManager {
       if (val === null || typeof val !== 'object') {
         return val;
       }
-      
+
       // Handle Date objects explicitly
       if (val instanceof Date) {
         return val.toISOString();
@@ -249,7 +249,7 @@ export class CacheManager {
         return val.map(normalize);
       }
 
-      // If it's a non-plain object (has a different constructor than Object), 
+      // If it's a non-plain object (has a different constructor than Object),
       // but not a Date/Array, we check if it has a toJSON method
       if (val.constructor !== Object && typeof val.toJSON === 'function') {
         return normalize(val.toJSON());

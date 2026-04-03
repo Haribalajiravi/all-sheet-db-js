@@ -52,13 +52,15 @@ describe('CacheManager (IndexedDB Mock)', () => {
         setTimeout(() => req.onsuccess?.({ target: req }), 0);
         return req;
       }),
-      openCursor: jest.fn((range) => {
+      openCursor: jest.fn(range => {
         const req = new IDBRequestMock();
         const allKeys = Object.keys(store).sort();
         let filteredKeys = allKeys;
 
         if (range && range.lower) {
-          filteredKeys = allKeys.filter(k => k >= range.lower && (!range.upper || k <= range.upper));
+          filteredKeys = allKeys.filter(
+            k => k >= range.lower && (!range.upper || k <= range.upper)
+          );
         }
 
         let index = 0;
