@@ -73,42 +73,23 @@ describe('ServiceManager Population', () => {
   let mockService: MockService;
 
   beforeEach(() => {
-    // Reset singleton state for testing
+    // Reset singleton state
     cacheManager.reset();
 
-    // Mock IndexedDB to avoid warnings/hangs in test environment
-    const mockRequest = {
-      onsuccess: null,
-      onerror: null,
-      result: {
-        transaction: () => ({
-          objectStore: () => ({
-            get: () => ({ onsuccess: null }),
-            put: () => ({ onsuccess: null }),
-            delete: () => ({ onsuccess: null }),
-            clear: () => ({ onsuccess: null }),
-            openKeyCursor: () => ({ onsuccess: null }),
-          }),
-        }),
-        objectStoreNames: { contains: () => true },
-      },
-    };
-
-    (window as any).indexedDB = {
-      open: jest.fn().mockImplementation(() => {
-        const req = { ...mockRequest };
-        setTimeout(() => {
-          if (req.onsuccess) (req as any).onsuccess({ target: req });
-        }, 0);
-        return req;
-      }),
-    };
-
+    // Mock all CacheManager methods globally for this test suite
+    // to avoid IndexedDB timeouts in JSDOM
+    jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
+    jest.spyOn(cacheManager, 'set').mockResolvedValue();
+    jest.spyOn(cacheManager, 'invalidateByPrefix').mockResolvedValue();
+    jest.spyOn(cacheManager, 'clear').mockResolvedValue();
+    jest.spyOn(cacheManager, 'getStats').mockResolvedValue({ size: 0, keys: [] });
+    
+    // Fallback IDB mock
+    (window as any).indexedDB = { open: jest.fn().mockImplementation(() => ({})) };
+    
     serviceManager = new ServiceManager();
     mockService = new MockService();
     serviceManager.registerService(mockService);
-
-    jest.useRealTimers();
   });
 
   it('should populate related data from another sheet', async () => {

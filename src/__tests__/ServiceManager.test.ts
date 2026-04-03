@@ -72,37 +72,19 @@ describe('ServiceManager', () => {
   beforeEach(() => {
     cacheManager.reset();
 
-    const mockRequest = {
-      onsuccess: null,
-      onerror: null,
-      result: {
-        transaction: () => ({
-          objectStore: () => ({
-            get: () => ({ onsuccess: null }),
-            put: () => ({ onsuccess: null }),
-            delete: () => ({ onsuccess: null }),
-            clear: () => ({ onsuccess: null }),
-            openKeyCursor: () => ({ onsuccess: null }),
-          }),
-        }),
-        objectStoreNames: { contains: () => true },
-      },
-    };
+    // Mock all CacheManager methods globally for this test suite
+    // to avoid IndexedDB timeouts in JSDOM
+    jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
+    jest.spyOn(cacheManager, 'set').mockResolvedValue();
+    jest.spyOn(cacheManager, 'invalidateByPrefix').mockResolvedValue(undefined as any);
+    jest.spyOn(cacheManager, 'clear').mockResolvedValue();
+    jest.spyOn(cacheManager, 'getStats').mockResolvedValue({ size: 0, keys: [] });
 
-    (window as any).indexedDB = {
-      open: jest.fn().mockImplementation(() => {
-        const req = { ...mockRequest };
-        setTimeout(() => {
-          if (req.onsuccess) (req as any).onsuccess({ target: req });
-        }, 0);
-        return req;
-      }),
-    };
+    // Fallback IDB mock
+    (window as any).indexedDB = { open: jest.fn().mockImplementation(() => ({})) };
 
     serviceManager = new ServiceManager();
     mockService = new MockService();
-
-    jest.useRealTimers();
   });
 
   describe('registerService', () => {
