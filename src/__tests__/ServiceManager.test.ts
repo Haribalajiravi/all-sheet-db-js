@@ -72,9 +72,9 @@ describe('ServiceManager', () => {
   beforeEach(() => {
     cacheManager.reset();
 
-    const mockRequest = { 
-      onsuccess: null, 
-      onerror: null, 
+    const mockRequest = {
+      onsuccess: null,
+      onerror: null,
       result: {
         transaction: () => ({
           objectStore: () => ({
@@ -83,10 +83,10 @@ describe('ServiceManager', () => {
             delete: () => ({ onsuccess: null }),
             clear: () => ({ onsuccess: null }),
             openKeyCursor: () => ({ onsuccess: null }),
-          })
+          }),
         }),
-        objectStoreNames: { contains: () => true }
-      }
+        objectStoreNames: { contains: () => true },
+      },
     };
 
     (window as any).indexedDB = {
@@ -261,9 +261,7 @@ describe('ServiceManager', () => {
     it('should invalidate cache when storing data', async () => {
       serviceManager.registerService(mockService);
       const sheetName = 'invalidate-sheet';
-      const spyInvalidate = jest
-        .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockResolvedValue();
+      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockResolvedValue();
 
       await serviceManager.store([{ id: 1 }], { sheetName });
 
@@ -274,9 +272,7 @@ describe('ServiceManager', () => {
     it('should invalidate cache when deleting rows', async () => {
       serviceManager.registerService(mockService);
       const sheetName = 'delete-sheet';
-      const spyInvalidate = jest
-        .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockResolvedValue();
+      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockResolvedValue();
 
       await serviceManager.deleteRows({ sheetName, where: () => true });
 
@@ -287,9 +283,7 @@ describe('ServiceManager', () => {
     it('should invalidate cache when updating rows', async () => {
       serviceManager.registerService(mockService);
       const sheetName = 'update-sheet';
-      const spyInvalidate = jest
-        .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockResolvedValue();
+      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockResolvedValue();
 
       await serviceManager.updateRows({ sheetName, where: () => true, set: r => r });
 
@@ -334,9 +328,7 @@ describe('ServiceManager', () => {
         appliedMigrations: 1,
       });
 
-      const spyInvalidate = jest
-        .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockResolvedValue();
+      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockResolvedValue();
 
       await serviceManager.migrate({
         spreadsheetId: 'spread-id',
@@ -359,9 +351,7 @@ describe('ServiceManager', () => {
         error: 'Failed',
       });
 
-      const spyInvalidate = jest
-        .spyOn(cacheManager, 'invalidateByPrefix')
-        .mockResolvedValue();
+      const spyInvalidate = jest.spyOn(cacheManager, 'invalidateByPrefix').mockResolvedValue();
 
       await serviceManager.migrate({
         spreadsheetId: 'spread-id',

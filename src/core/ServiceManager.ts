@@ -405,7 +405,7 @@ export class ServiceManager {
   private async applyPopulation(
     data: any[],
     populate: PopulateOptions[],
-    originalOptions: RetrieveOptions,
+    originalOptions: RetrieveOptions
   ): Promise<any[]> {
     const resultData = [...data];
 

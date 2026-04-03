@@ -6,13 +6,10 @@ import { ServiceManager } from '../core/ServiceManager';
 import { cacheManager } from '../core/CacheManager';
 import { ISpreadsheetService } from '../types/service.interface';
 import {
-  StoreOptions,
   StoreResult,
   RetrieveOptions,
   RetrieveResult,
-  DeleteOptions,
   DeleteResult,
-  UpdateOptions,
   UpdateResult,
   AuthToken,
 } from '../types';
@@ -46,7 +43,7 @@ class MockService implements ISpreadsheetService {
 
   async retrieve<T = unknown>(options: RetrieveOptions): Promise<RetrieveResult<T>> {
     const target = options.range || options.sheetName;
-    
+
     if (target === 'Orders') {
       return {
         success: true,
@@ -80,9 +77,9 @@ describe('ServiceManager Population', () => {
     cacheManager.reset();
 
     // Mock IndexedDB to avoid warnings/hangs in test environment
-    const mockRequest = { 
-      onsuccess: null, 
-      onerror: null, 
+    const mockRequest = {
+      onsuccess: null,
+      onerror: null,
       result: {
         transaction: () => ({
           objectStore: () => ({
@@ -91,10 +88,10 @@ describe('ServiceManager Population', () => {
             delete: () => ({ onsuccess: null }),
             clear: () => ({ onsuccess: null }),
             openKeyCursor: () => ({ onsuccess: null }),
-          })
+          }),
         }),
-        objectStoreNames: { contains: () => true }
-      }
+        objectStoreNames: { contains: () => true },
+      },
     };
 
     (window as any).indexedDB = {
@@ -106,11 +103,11 @@ describe('ServiceManager Population', () => {
         return req;
       }),
     };
-    
+
     serviceManager = new ServiceManager();
     mockService = new MockService();
     serviceManager.registerService(mockService);
-    
+
     jest.useRealTimers();
   });
 

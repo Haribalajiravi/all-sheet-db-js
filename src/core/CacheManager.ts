@@ -88,7 +88,7 @@ export class CacheManager {
   async get<T>(key: string, ttl: number = CacheManager.DEFAULT_TTL): Promise<T | null> {
     try {
       const db = await this.getDB();
-      
+
       const entry = await new Promise<CacheEntry<T> | null>((resolve, reject) => {
         const transaction = db.transaction([CacheManager.STORE_NAME], 'readonly');
         const store = transaction.objectStore(CacheManager.STORE_NAME);
@@ -185,13 +185,15 @@ export class CacheManager {
       if (keysToRemove.length > 0) {
         const transaction = db.transaction([CacheManager.STORE_NAME], 'readwrite');
         const store = transaction.objectStore(CacheManager.STORE_NAME);
-        await Promise.all(keysToRemove.map(key => {
-          return new Promise((resolve, reject) => {
-            const req = store.delete(key);
-            req.onsuccess = () => resolve(true);
-            req.onerror = () => reject(req.error);
-          });
-        }));
+        await Promise.all(
+          keysToRemove.map(key => {
+            return new Promise((resolve, reject) => {
+              const req = store.delete(key);
+              req.onsuccess = () => resolve(true);
+              req.onerror = () => reject(req.error);
+            });
+          })
+        );
         logger.debug(`Invalidated ${keysToRemove.length} cache entries for prefix: ${partialKey}`);
       }
     } catch (error) {

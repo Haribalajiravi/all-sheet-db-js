@@ -35,12 +35,12 @@ describe('CacheManager (IndexedDB Mock)', () => {
         setTimeout(() => req.onsuccess?.({ target: req }), 0);
         return req;
       }),
-      get: jest.fn((key) => {
+      get: jest.fn(key => {
         const req = IDBRequestMock.createSuccess(store[key]);
         setTimeout(() => req.onsuccess?.({ target: req }), 0);
         return req;
       }),
-      delete: jest.fn((key) => {
+      delete: jest.fn(key => {
         delete store[key];
         const req = IDBRequestMock.createSuccess(undefined);
         setTimeout(() => req.onsuccess?.({ target: req }), 0);
@@ -58,9 +58,12 @@ describe('CacheManager (IndexedDB Mock)', () => {
         let index = 0;
         const iterate = () => {
           if (index < keys.length) {
-            req.result = { 
-              key: keys[index], 
-              continue: () => { index++; iterate(); } 
+            req.result = {
+              key: keys[index],
+              continue: () => {
+                index++;
+                iterate();
+              },
             };
           } else {
             req.result = null;
@@ -115,7 +118,7 @@ describe('CacheManager (IndexedDB Mock)', () => {
     const ttl = 100; // 100ms
 
     await cacheManager.set(key, data);
-    
+
     // Wait for TTL
     await new Promise(resolve => setTimeout(resolve, ttl + 50));
 
