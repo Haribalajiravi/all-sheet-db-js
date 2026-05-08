@@ -40,6 +40,12 @@ class MockService implements ISpreadsheetService {
   async migrate(): Promise<any> {
     return { success: true };
   }
+  async getSpreadsheet(): Promise<any> {
+    return {};
+  }
+  async addSheet(): Promise<void> {}
+  async renameSheet(): Promise<void> {}
+  async updateSpreadsheetTitle(): Promise<void> {}
 
   async retrieve<T = unknown>(options: RetrieveOptions): Promise<RetrieveResult<T>> {
     const target = options.range || options.sheetName;

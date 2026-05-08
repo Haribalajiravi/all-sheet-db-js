@@ -338,6 +338,42 @@ export class ServiceManager {
     }
   }
 
+  /**
+   * Get full metadata for a spreadsheet
+   */
+  async getSpreadsheet(spreadsheetId: string): Promise<any> {
+    const service = this.getCurrentService();
+    if (!service) throw new ServiceError('No active service selected');
+    return service.getSpreadsheet(spreadsheetId);
+  }
+
+  /**
+   * Add a new sheet (tab) to a spreadsheet
+   */
+  async addSheet(spreadsheetId: string, title: string): Promise<void> {
+    const service = this.getCurrentService();
+    if (!service) throw new ServiceError('No active service selected');
+    await service.addSheet(spreadsheetId, title);
+  }
+
+  /**
+   * Rename an existing sheet (tab)
+   */
+  async renameSheet(spreadsheetId: string, sheetId: number, newTitle: string): Promise<void> {
+    const service = this.getCurrentService();
+    if (!service) throw new ServiceError('No active service selected');
+    await service.renameSheet(spreadsheetId, sheetId, newTitle);
+  }
+
+  /**
+   * Rename the actual spreadsheet file
+   */
+  async updateSpreadsheetTitle(spreadsheetId: string, newTitle: string): Promise<void> {
+    const service = this.getCurrentService();
+    if (!service) throw new ServiceError('No active service selected');
+    await service.updateSpreadsheetTitle(spreadsheetId, newTitle);
+  }
+
   // ╭──────────────────────────────────────────────────────────────────────╮
   // │  Data Manipulation Helpers                                          │
   // ╰──────────────────────────────────────────────────────────────────────╯

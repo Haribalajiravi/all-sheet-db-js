@@ -63,6 +63,22 @@ class MockService implements ISpreadsheetService {
   async migrate(_options: any): Promise<any> {
     return { success: true, fromVersion: 0, toVersion: 0, appliedMigrations: 0 };
   }
+
+  async getSpreadsheet(_spreadsheetId: string): Promise<any> {
+    return { spreadsheetId: _spreadsheetId, properties: { title: 'Mock' }, sheets: [] };
+  }
+
+  async addSheet(_spreadsheetId: string, _title: string): Promise<void> {
+    // mock addSheet
+  }
+
+  async renameSheet(_spreadsheetId: string, _sheetId: number, _newTitle: string): Promise<void> {
+    // mock renameSheet
+  }
+
+  async updateSpreadsheetTitle(_spreadsheetId: string, _newTitle: string): Promise<void> {
+    // mock updateSpreadsheetTitle
+  }
 }
 
 describe('ServiceManager', () => {

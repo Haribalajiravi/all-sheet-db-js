@@ -72,4 +72,24 @@ export interface ISpreadsheetService {
    * Clear authentication
    */
   clearAuth(): Promise<void>;
+
+  /**
+   * Get full metadata for a spreadsheet
+   */
+  getSpreadsheet(spreadsheetId: string): Promise<any>;
+
+  /**
+   * Add a new sheet (tab) to a spreadsheet
+   */
+  addSheet(spreadsheetId: string, title: string): Promise<void>;
+
+  /**
+   * Rename an existing sheet (tab)
+   */
+  renameSheet(spreadsheetId: string, sheetId: number, newTitle: string): Promise<void>;
+
+  /**
+   * Rename the actual spreadsheet file
+   */
+  updateSpreadsheetTitle(spreadsheetId: string, newTitle: string): Promise<void>;
 }

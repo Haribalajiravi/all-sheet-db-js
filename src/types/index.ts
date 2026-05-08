@@ -41,6 +41,26 @@ export interface GoogleSpreadsheetSummary {
   name: string;
 }
 
+/** Full metadata for a spreadsheet, including sheets (tabs) information */
+export interface GoogleSpreadsheetFullMetadata {
+  spreadsheetId: string;
+  properties: {
+    title: string;
+  };
+  sheets: Array<{
+    properties: {
+      sheetId: number;
+      title: string;
+      index: number;
+      sheetType: string;
+      gridProperties?: {
+        rowCount: number;
+        columnCount: number;
+      };
+    };
+  }>;
+}
+
 export interface ColumnDefinition {
   name: string;
   type: 'string' | 'number' | 'date' | 'boolean' | 'formula';

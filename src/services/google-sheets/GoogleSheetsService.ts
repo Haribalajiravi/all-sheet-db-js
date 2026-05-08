@@ -21,6 +21,7 @@ import {
   MigrationOptions,
   MigrationResult,
   MigrationAction,
+  GoogleSpreadsheetFullMetadata,
 } from '../../types';
 import { logger } from '../../utils/logger';
 import {
@@ -420,6 +421,65 @@ export class GoogleSheetsService implements ISpreadsheetService {
     await this.ensureAccessToken();
     if (!this.gapi?.client?.drive?.files) throw new ServiceError('Drive client not loaded.');
     await this.gapi.client.drive.files.delete({ fileId: spreadsheetId });
+  }
+
+  async getSpreadsheet(spreadsheetId: string): Promise<GoogleSpreadsheetFullMetadata> {
+    await this.ensureGapiClientInitialized();
+    await this.ensureAccessToken();
+    const res = await this.gapi!.client.sheets.spreadsheets.get({ spreadsheetId });
+    return res.result as GoogleSpreadsheetFullMetadata;
+  }
+
+  async addSheet(spreadsheetId: string, title: string): Promise<void> {
+    await this.ensureGapiClientInitialized();
+    await this.ensureAccessToken();
+    await this.gapi!.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: [
+          {
+            addSheet: {
+              properties: { title },
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  async renameSheet(spreadsheetId: string, sheetId: number, newTitle: string): Promise<void> {
+    await this.ensureGapiClientInitialized();
+    await this.ensureAccessToken();
+    await this.gapi!.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: [
+          {
+            updateSheetProperties: {
+              properties: {
+                sheetId,
+                title: newTitle,
+              },
+              fields: 'title',
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  async updateSpreadsheetTitle(spreadsheetId: string, newTitle: string): Promise<void> {
+    await this.ensureGapiClientInitialized();
+    await this.ensureAccessToken();
+    if (!this.gapi?.client?.drive?.files) {
+      throw new ServiceError('Drive client not loaded. Check discovery docs include Drive v3.');
+    }
+    await this.gapi.client.drive.files.update({
+      fileId: spreadsheetId,
+      resource: {
+        name: newTitle,
+      },
+    });
   }
 
   // ╭──────────────────────────────────────────────────────────────────────╮

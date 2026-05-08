@@ -20,13 +20,27 @@ export interface GapiClientNamespace {
           result: { files?: Array<{ id?: string; name?: string }> };
         }>;
         delete: (params: { fileId: string }) => Promise<void>;
+        update: (params: {
+          fileId: string;
+          resource: { name?: string };
+        }) => Promise<{ result: { id: string; name: string } }>;
       };
     };
     sheets: {
       spreadsheets: {
         get: (params: { spreadsheetId: string }) => Promise<{
           result: {
-            sheets?: Array<{ properties?: { title?: string } }>;
+            spreadsheetId?: string;
+            properties?: { title?: string };
+            sheets?: Array<{
+              properties?: {
+                sheetId?: number;
+                title?: string;
+                index?: number;
+                sheetType?: string;
+                gridProperties?: { rowCount?: number; columnCount?: number };
+              };
+            }>;
           };
         }>;
         create: (params: {
@@ -43,7 +57,11 @@ export interface GapiClientNamespace {
         batchUpdate: (params: {
           spreadsheetId: string;
           resource: { requests?: unknown[] };
-        }) => Promise<unknown>;
+        }) => Promise<{
+          result: {
+            replies?: any[];
+          };
+        }>;
         values: {
           get: (params: { spreadsheetId: string; range: string }) => Promise<{
             result: { values?: unknown[][] };
